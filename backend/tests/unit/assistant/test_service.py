@@ -1,7 +1,8 @@
 import pytest
 
 from app.modules.assistant.llm import LLMUnavailableError
-from app.modules.assistant.service import AskService, QueryIntent
+from app.modules.assistant.schemas import QueryIntent
+from app.modules.assistant.service import AskService
 from tests.conftest import build_employee
 
 

@@ -1,18 +1,10 @@
-from typing import Annotated
-
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
 
 from app.core.dependencies import LLMDep, SessionDep
-from app.modules.assistant.service import AskResult, AskService
+from app.modules.assistant.schemas import AskRequest, AskResult
+from app.modules.assistant.service import AskService
 
-router = APIRouter(prefix="/api", tags=["ai"])
-
-
-class AskRequest(BaseModel):
-    question: Annotated[str, Field(min_length=3, max_length=500)]
-
-    model_config = {"str_strip_whitespace": True}
+router = APIRouter(prefix="/api", tags=["assistant"])
 
 
 @router.post("/ask")
