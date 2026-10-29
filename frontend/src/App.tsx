@@ -1,10 +1,13 @@
-import { AppShell, Burger, Group, NavLink, Title } from '@mantine/core'
+import { AppShell, Burger, Group, Loader, NavLink, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChartBar, IconSparkles, IconUsers } from '@tabler/icons-react'
+import { lazy, Suspense } from 'react'
 import { NavLink as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { AskPage } from './features/ask/AskPage'
-import { EmployeesPage } from './features/employees/EmployeesPage'
-import { InsightsPage } from './features/insights/InsightsPage'
+
+// Route-level code splitting: the charting library is only downloaded for Pay insights.
+const EmployeesPage = lazy(() => import('./features/employees/EmployeesPage').then((m) => ({ default: m.EmployeesPage })))
+const InsightsPage = lazy(() => import('./features/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })))
+const AskPage = lazy(() => import('./features/ask/AskPage').then((m) => ({ default: m.AskPage })))
 
 const NAV = [
   { to: '/employees', label: 'Employees', icon: IconUsers },
@@ -42,12 +45,14 @@ export function App() {
         ))}
       </AppShell.Navbar>
       <AppShell.Main>
-        <Routes>
-          <Route path="/" element={<Navigate to="/employees" replace />} />
-          <Route path="/employees" element={<EmployeesPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/ask" element={<AskPage />} />
-        </Routes>
+        <Suspense fallback={<Loader m="xl" />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/employees" replace />} />
+            <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/ask" element={<AskPage />} />
+          </Routes>
+        </Suspense>
       </AppShell.Main>
     </AppShell>
   )
