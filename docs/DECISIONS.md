@@ -31,6 +31,7 @@ is the quick overview.
 | 22 | **Individual-level answers need a permission; groups under 3 hide pay** | An average of one person is that person's salary | Small departments in small countries show headcount only, for users without the permission |
 | 23 | **Ollama default; Claude / OpenAI optional per question** | Private by default; better understanding on demand; the provider can't change a number | Cloud providers see the question text (never salary data) |
 | 24 | **Actor seam** (`core/actor.py`) instead of auth | Audit trail and permission checks exist now; SSO fills one function later | Identity comes from configuration until then |
+| 25 | **Zustand for client state only; TanStack Query for server state** | Directory filters survive navigation and the chat survives reloads, with rules in testable store actions; no boilerplate | Two state tools to know; a store is never a cache of server data |
 
 ## Deliberately not built
 See the table in [REQUIREMENTS.md](REQUIREMENTS.md#deliberately-left-out-and-why) — auth,

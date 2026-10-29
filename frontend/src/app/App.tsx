@@ -1,15 +1,21 @@
 import { Anchor, AppShell, Container, Group, ThemeIcon, Title } from '@mantine/core'
 import { IconCoin } from '@tabler/icons-react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
-import { ChatWidget, type OpenAssistantState } from '@/features/assistant/ChatWidget'
+import { useAssistantStore } from '@/features/assistant/assistantStore'
+import { ChatWidget } from '@/features/assistant/ChatWidget'
 import { PageSkeleton } from '@/shared/ui/loading'
 
 // Route-level code splitting: the charting library is only downloaded for Pay insights.
 const EmployeesPage = lazy(() => import('@/features/employees/EmployeesPage').then((m) => ({ default: m.EmployeesPage })))
 const InsightsPage = lazy(() => import('@/features/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })))
 
-const openAssistant: OpenAssistantState = { openAssistant: true }
+/** The old /ask page: land on home with the assistant open. */
+function OpenAssistant() {
+  const open = useAssistantStore((s) => s.open)
+  useEffect(open, [open])
+  return <Navigate to="/" replace />
+}
 
 export function App() {
   return (
@@ -37,7 +43,7 @@ export function App() {
               <Route path="/" element={<EmployeesPage />} />
               <Route path="/insights" element={<InsightsPage />} />
               <Route path="/employees" element={<Navigate to="/" replace />} />
-              <Route path="/ask" element={<Navigate to="/" replace state={openAssistant} />} />
+              <Route path="/ask" element={<OpenAssistant />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

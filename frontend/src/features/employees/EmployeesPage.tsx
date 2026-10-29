@@ -32,7 +32,8 @@ import { LoadingStatus, RefreshBar, SkeletonRows } from '@/shared/ui/loading'
 import { EmployeeForm } from './components/EmployeeForm'
 import { SalaryHistoryDrawer } from './components/SalaryHistoryDrawer'
 import { DirectoryToolbar } from './components/DirectoryToolbar'
-import { SORT_OPTIONS, type Amount, type Filters } from './components/directoryOptions'
+import type { Amount } from './components/directoryOptions'
+import { useDirectoryStore } from './directoryStore'
 import {
   useCreateEmployee,
   useDeleteEmployee,
@@ -47,14 +48,11 @@ const PAGE_SIZE = 25
 const toBound = (value: Amount) => (typeof value === 'number' ? value : undefined)
 
 export function EmployeesPage() {
-  const [search, setSearch] = useState('')
+  // What the list shows lives in a store, so it survives leaving the page and coming back.
+  const directory = useDirectoryStore()
+  const { search, filters, salaryMin, salaryMax, sort, page } = directory
   const [debouncedSearch] = useDebouncedValue(search, 300)
-  const [filters, setFilters] = useState<Filters>({})
-  const [salaryMin, setSalaryMin] = useState<Amount>('')
-  const [salaryMax, setSalaryMax] = useState<Amount>('')
   const [[debouncedMin, debouncedMax]] = useDebouncedValue([salaryMin, salaryMax], 300)
-  const [sort, setSort] = useState(SORT_OPTIONS[0].value)
-  const [page, setPage] = useState(1)
 
   const [editing, setEditing] = useState<Employee | 'new' | null>(null)
   const [deleting, setDeleting] = useState<Employee | null>(null)
@@ -81,31 +79,11 @@ export function EmployeesPage() {
   const remove = useDeleteEmployee()
   const saving = editing === 'new' ? create : update
 
-  const setFilter = (key: keyof Filters, value: string | null) => {
-    setFilters((f) => ({ ...f, [key]: value ?? undefined }))
-    setPage(1)
-  }
-  const clearFilters = () => {
-    setFilters({})
-    setSalaryMin('')
-    setSalaryMax('')
-    setPage(1)
-  }
-  /** Header click: sort by that column; clicking it again flips the direction. */
-  const sortBy = (field: EmployeeQuery['sort'], firstOrder: EmployeeQuery['order']) => {
-    const nextOrder = sortField === field ? (order === 'asc' ? 'desc' : 'asc') : firstOrder
-    setSort(`${field}:${nextOrder}`)
-    setPage(1)
-  }
   const sortProps = (field: EmployeeQuery['sort'], firstOrder: EmployeeQuery['order']) => ({
     active: sortField === field,
     order,
-    onClick: () => sortBy(field, firstOrder),
+    onClick: () => directory.sortBy(field, firstOrder),
   })
-  const setBound = (set: (value: Amount) => void) => (value: Amount) => {
-    set(value)
-    setPage(1)
-  }
 
   const closeForm = () => {
     setEditing(null)
@@ -159,23 +137,17 @@ export function EmployeesPage() {
       <DirectoryToolbar
         meta={meta.data}
         search={search}
-        onSearch={(value) => {
-          setSearch(value)
-          setPage(1)
-        }}
+        onSearch={directory.setSearch}
         filters={filters}
-        onFilter={setFilter}
+        onFilter={directory.setFilter}
         salaryMin={salaryMin}
         salaryMax={salaryMax}
-        onSalaryMin={setBound(setSalaryMin)}
-        onSalaryMax={setBound(setSalaryMax)}
+        onSalaryMin={directory.setSalaryMin}
+        onSalaryMax={directory.setSalaryMax}
         rangeCurrency={rangeCurrency}
         sort={sort}
-        onSort={(value) => {
-          setSort(value)
-          setPage(1)
-        }}
-        onClearAll={clearFilters}
+        onSort={directory.setSort}
+        onClearAll={directory.clearFilters}
       />
 
       {employees.error && <Alert color="red">{employees.error.message}</Alert>}
@@ -249,7 +221,7 @@ export function EmployeesPage() {
       </Paper>
 
       <Group justify="flex-end">
-        <Pagination total={pages} value={page} onChange={setPage} />
+        <Pagination total={pages} value={page} onChange={directory.setPage} />
       </Group>
 
       <Modal

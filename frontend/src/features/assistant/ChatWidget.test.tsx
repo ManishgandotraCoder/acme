@@ -5,6 +5,7 @@ import { ApiError } from '@/shared/api/client'
 import { renderWithProviders } from '@/test/render'
 import { ChatWidget } from './ChatWidget'
 import type { AskResult } from './types'
+import { reloadAssistant } from '@/test/stores'
 
 const answer: AskResult = {
   question: 'What do data analysts earn in Germany?',
@@ -208,12 +209,13 @@ describe('ChatWidget', () => {
     expect(within(chat).queryByRole('textbox', { name: /model/i })).not.toBeInTheDocument()
   })
 
-  it('saves the conversation so it survives a page reload', async () => {
+  it('restores the saved conversation after a page reload', async () => {
     vi.spyOn(assistantApi, 'ask').mockResolvedValue(answer)
     const first = await openChat()
     await first.user.type(within(first.chat).getByLabelText(/message/i), 'Analysts in Germany?{Enter}')
     await within(first.chat).findByText(answer.answer)
     first.unmount()
+    await reloadAssistant()
 
     const { chat } = await openChat()
 
@@ -228,6 +230,7 @@ describe('ChatWidget', () => {
     await within(first.chat).findByText(answer.answer)
     await first.user.click(within(first.chat).getByRole('button', { name: /new conversation/i }))
     first.unmount()
+    await reloadAssistant()
 
     const { chat } = await openChat()
 

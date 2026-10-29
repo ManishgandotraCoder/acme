@@ -1,8 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
+import { useAssistantStore } from '@/features/assistant/assistantStore'
+import { useDirectoryStore } from '@/features/employees/directoryStore'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  // Stores are module singletons: reset them so tests stay independent.
+  useDirectoryStore.setState(useDirectoryStore.getInitialState(), true)
+  useAssistantStore.setState(useAssistantStore.getInitialState(), true)
+  localStorage.clear()
+})
 
 // Browser APIs Mantine relies on that jsdom does not implement.
 Object.defineProperty(window, 'matchMedia', {

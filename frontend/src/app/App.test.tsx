@@ -32,6 +32,18 @@ describe('App navigation', () => {
     expect(await screen.findByRole('heading', { name: 'Employees' })).toBeInTheDocument()
   })
 
+  it('keeps directory filters when going to insights and back', async () => {
+    const { user } = renderWithProviders(<App />, { route: '/' })
+    await user.click(await screen.findByRole('textbox', { name: /filter by job level/i }))
+    await user.click(screen.getByRole('option', { name: 'Senior' }))
+
+    await user.click(screen.getByRole('link', { name: /pay insights/i }))
+    await user.click(await screen.findByRole('link', { name: /back to employees/i }))
+
+    expect(await screen.findByRole('textbox', { name: /filter by job level/i })).toHaveValue('Senior')
+    expect(employeesApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ job_level: 'Senior' }))
+  })
+
   it('offers the pay assistant on every page', async () => {
     renderWithProviders(<App />, { route: '/insights' })
     expect(await screen.findByRole('button', { name: /open pay assistant/i })).toBeInTheDocument()

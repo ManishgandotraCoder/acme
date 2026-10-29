@@ -6,7 +6,7 @@ capabilities: **Salary Management** and **Salary Intelligence** (ask the salary 
 English).
 
 **Stack:** Python 3.12 · FastAPI on uvicorn · SQLAlchemy 2 + PostgreSQL 17 + Alembic ·
-React 19 + TypeScript · Mantine · TanStack Query · Ollama (default) / Claude / OpenAI · pytest ·
+React 19 + TypeScript · Mantine · TanStack Query · Zustand · Ollama (default) / Claude / OpenAI · pytest ·
 Vitest + Testing Library · Docker · GitHub Actions
 
 | Read this | For |

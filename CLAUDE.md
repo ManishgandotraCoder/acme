@@ -32,7 +32,9 @@ lessons learned while building it — see docs/AI_USAGE.md.
 - Schema changes require an Alembic migration: `make migration m="..."`.
   `tests/unit/core/test_migrations.py` fails on model/migration drift.
 - Frontend: `features/<name>` owns `api.ts`, `types.ts` (mirrors backend schemas), hooks,
-  components. Shared code lives in `shared/`. Import across folders with `@/`.
+  components, and any Zustand store. Shared code lives in `shared/`. Import across folders
+  with `@/`. Server data goes through TanStack Query, never into a store; a store holds client
+  state that must outlive a component, and new stores are reset in `src/test/setup.ts`.
 
 ## Domain rules that are easy to get wrong
 - Salaries are stored in **local currency**. Never sum, average or sort across countries

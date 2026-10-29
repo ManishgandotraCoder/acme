@@ -195,8 +195,14 @@ frontend/src/
 ```
 
 - Each feature mirrors a backend module: its `types.ts` mirrors the module's `schemas.py`.
-- Server state lives in TanStack Query (cache, `keepPreviousData` paging, invalidation
-  after writes); UI state stays local. No global store needed.
+- **Server state** lives in TanStack Query (cache, `keepPreviousData` paging, invalidation
+  after writes) and is never copied into a store.
+- **Client state that outlives a component** lives in small Zustand stores owned by their
+  feature: `employees/directoryStore` (search, filters, sort, page, so they survive a trip to
+  insights; its actions own rules like "a new filter goes back to page 1") and
+  `assistant/assistantStore` (conversation, open state, model choice; the conversation and
+  choice are saved in the browser via `persist`, with storage errors swallowed). Everything
+  else (form drafts, dialogs) stays in component state. Tests reset the stores after each test.
 - Routes: `/` employees (home), `/insights` pay insights. No sidebar: the home page links to
   insights and back. The pay assistant is a floating chat mounted once in the shell, so its
   conversation survives navigation; the old `/ask` URL opens it.

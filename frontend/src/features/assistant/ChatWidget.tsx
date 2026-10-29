@@ -27,11 +27,9 @@ import {
 } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
 import { assistantApi } from '@/features/assistant/api'
-import type { AskResult } from '@/features/assistant/types'
 import { toAnswerParts } from './answerFormat'
-import { loadConversation, saveConversation } from './conversationStore'
+import { useAssistantStore } from './assistantStore'
 import { WorkingIndicator } from '@/shared/ui/loading'
 
 // Charts are heavy and the chat is on every page: load them with the first answer that has one.
@@ -59,37 +57,21 @@ const METRIC_LABELS: Record<string, string> = {
   unsupported: 'Not understood',
 }
 
-type Message =
-  | { id: number; role: 'user'; text: string }
-  | { id: number; role: 'assistant'; result: AskResult }
-  | { id: number; role: 'error'; text: string }
-
-type NewMessage = Message extends infer M ? (M extends Message ? Omit<M, 'id'> : never) : never
-
-/** Location state that opens the assistant on arrival (used by the old /ask route). */
-export interface OpenAssistantState {
-  openAssistant?: boolean
-}
-
 /**
- * Floating pay assistant. Mounted once in the app shell, so the conversation survives
- * navigation between pages.
+ * Floating pay assistant. Mounted once in the app shell; its conversation, open state and model
+ * choice live in the assistant store, so they survive navigation (and the conversation reloads).
  */
 export function ChatWidget() {
-  const location = useLocation()
-  const [open, setOpen] = useState(false)
+  const { isOpen, messages, open, close, append, newConversation, chooseProvider } = useAssistantStore()
+  const savedProvider = useAssistantStore((s) => s.provider)
   const [draft, setDraft] = useState('')
-  const [messages, setMessages] = useState<Message[]>(() => loadConversation<Message>())
-  const nextId = useRef(Math.max(-1, ...messages.map((m) => m.id)) + 1)
   const viewport = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
 
-  const append = (message: NewMessage) =>
-    setMessages((previous) => [...previous, { ...message, id: nextId.current++ }])
-
   const providers = useQuery({ queryKey: ['assistant', 'providers'], queryFn: assistantApi.providers })
-  const [chosenProvider, setChosenProvider] = useState<string | null>(null)
-  const provider = chosenProvider ?? providers.data?.find((p) => p.default)?.id
+  // A saved choice the server no longer offers (e.g. its key was removed) falls back to the default.
+  const provider =
+    providers.data?.find((p) => p.id === savedProvider)?.id ?? providers.data?.find((p) => p.default)?.id
   const providerLabel = (id: string | null) => providers.data?.find((p) => p.id === id)?.label ?? id
 
   const ask = useMutation({
@@ -99,20 +81,14 @@ export function ChatWidget() {
       append({ role: 'error', text: `${error.message} Pay insights still work without the assistant.` }),
   })
 
-  useEffect(() => {
-    if ((location.state as OpenAssistantState | null)?.openAssistant) setOpen(true)
-  }, [location.state])
-
   // Keep the latest message in view.
   useEffect(() => {
     viewport.current?.scrollTo({ top: viewport.current.scrollHeight, behavior: 'smooth' })
   }, [messages, ask.isPending])
 
   useEffect(() => {
-    if (open) input.current?.focus()
-  }, [open])
-
-  useEffect(() => saveConversation(messages), [messages])
+    if (isOpen) input.current?.focus()
+  }, [isOpen])
 
   const send = (text: string) => {
     const question = text.trim()
@@ -124,14 +100,14 @@ export function ChatWidget() {
 
   return (
     <>
-      {!open && (
+      {!isOpen && (
         <Tooltip label="Ask about pay" position="left">
           <ActionIcon
             size={56}
             radius="xl"
             variant="filled"
             aria-label="Open pay assistant"
-            onClick={() => setOpen(true)}
+            onClick={open}
             style={{ position: 'fixed', right: 24, bottom: 24, zIndex: 200, boxShadow: 'var(--mantine-shadow-lg)' }}
           >
             <IconMessageChatbot size={28} />
@@ -139,7 +115,7 @@ export function ChatWidget() {
         </Tooltip>
       )}
 
-      <Transition mounted={open} transition="pop-bottom-right" duration={180}>
+      <Transition mounted={isOpen} transition="pop-bottom-right" duration={180}>
         {(styles) => (
           <Paper
             role="dialog"
@@ -147,7 +123,7 @@ export function ChatWidget() {
             shadow="xl"
             radius="lg"
             withBorder
-            onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+            onKeyDown={(e) => e.key === 'Escape' && close()}
             style={{
               ...styles,
               position: 'fixed',
@@ -178,12 +154,12 @@ export function ChatWidget() {
               <Group gap={4} wrap="nowrap">
                 {messages.length > 0 && (
                   <Tooltip label="New conversation">
-                    <ActionIcon variant="subtle" color="white" aria-label="New conversation" onClick={() => setMessages([])}>
+                    <ActionIcon variant="subtle" color="white" aria-label="New conversation" onClick={newConversation}>
                       <IconRefresh size={18} />
                     </ActionIcon>
                   </Tooltip>
                 )}
-                <CloseButton variant="subtle" c="white" aria-label="Close" onClick={() => setOpen(false)} />
+                <CloseButton variant="subtle" c="white" aria-label="Close" onClick={close} />
               </Group>
             </Group>
 
@@ -291,7 +267,7 @@ export function ChatWidget() {
                   allowDeselect={false}
                   data={providers.data!.map((p) => ({ value: p.id, label: `${p.label} · ${p.model}` }))}
                   value={provider ?? null}
-                  onChange={setChosenProvider}
+                  onChange={(id) => id && chooseProvider(id)}
                   comboboxProps={{ withinPortal: false }}
                 />
               )}
