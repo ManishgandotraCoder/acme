@@ -19,7 +19,7 @@ def test_plain_postgres_urls_from_hosting_providers_use_the_psycopg_driver(given
 
 
 def test_urls_that_already_name_a_driver_are_left_alone():
-    url = "postgresql+psycopg://salary:salary@localhost:5433/salary"
+    url = "postgresql://neondb_owner:npg_uMkfs2c8Wrvy@ep-old-leaf-b5xvlmoe-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
     assert Settings(database_url=url).database_url == url
 
 

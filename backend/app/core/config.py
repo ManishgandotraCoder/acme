@@ -13,7 +13,7 @@ class Settings(BaseSettings):
         env_prefix="SALARY_", env_file=".env", extra="ignore", populate_by_name=True
     )
 
-    database_url: str = "postgresql+psycopg://salary:salary@localhost:5433/salary"
+    database_url: str = "postgresql://neondb_owner:npg_uMkfs2c8Wrvy@ep-old-leaf-b5xvlmoe-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
     # Production schema is managed by Alembic (`alembic upgrade head`). Tests opt in to a
     # fast create_all() instead.
     auto_create_schema: bool = False

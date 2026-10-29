@@ -18,13 +18,16 @@ services:
   app:
     build: .
     ports: ["8000:8000"]
+    # Same settings as local development (API keys, model, actor...). Optional: copy
+    # backend/.env.example to backend/.env.
+    env_file:
+      - path: backend/.env
+        required: false
+    # Inside the container the database and Ollama are other services, not localhost, so
+    # these override whatever backend/.env says.
     environment:
       SALARY_DATABASE_URL: postgresql+psycopg://salary:salary@postgres:5432/salary
       SALARY_OLLAMA_URL: http://ollama:11434
-      SALARY_OLLAMA_MODEL: llama3.2
-      # Optional cloud models, passed through from the host environment when set.
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       postgres: { condition: service_healthy }
       ollama: { condition: service_started }
