@@ -1,7 +1,7 @@
 # Render blueprint: https://render.com/docs/blueprint-spec
-# Dashboard → New → Blueprint → pick this repo. Render builds the Dockerfile, provisions
-# PostgreSQL and injects its URL; the container migrates, seeds 10k employees on first boot
-# and serves UI + API on one URL. Ollama isn't hosted here: set ANTHROPIC_API_KEY or
+# Dashboard → New → Blueprint → pick this repo, and paste the Neon PostgreSQL URL as
+# SALARY_DATABASE_URL. Render builds the Dockerfile; the container migrates, seeds 10k
+# employees on first boot and serves UI + API on one URL. Ollama isn't hosted here: set ANTHROPIC_API_KEY or
 # OPENAI_API_KEY in the dashboard (and SALARY_LLM_PROVIDER to anthropic/openai) to enable the
 # assistant; without them it answers "unavailable" (503) while the rest of the app works.
 services:
@@ -10,26 +10,18 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
-    region: oregon
+    # Same AWS region as the Neon database (us-east-2), so queries don't cross the country.
+    region: ohio
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      - key: SALARY_DATABASE_URL
-        fromDatabase:
-          name: acme-salary-db
-          property: connectionString
       # Secrets: entered in the Render dashboard, never committed (sync: false).
+      # PostgreSQL is hosted on Neon: its free tier doesn't expire, unlike Render's.
+      - key: SALARY_DATABASE_URL
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: SALARY_LLM_PROVIDER
         sync: false
-
-databases:
-  - name: acme-salary-db
-    plan: free
-    region: oregon
-    postgresMajorVersion: "17"
-    databaseName: salary
-    user: salary

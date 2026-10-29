@@ -28,9 +28,9 @@ def test_health_check_points_at_a_live_endpoint(web, client):
     assert client.get(web["healthCheckPath"]).status_code == 200
 
 
-def test_database_url_comes_from_the_declared_postgres_database(blueprint, web):
+def test_database_url_is_a_dashboard_secret_never_committed(web):
     env = {var["key"]: var for var in web["envVars"]}
-    source = env["SALARY_DATABASE_URL"]["fromDatabase"]
+    database_url = env["SALARY_DATABASE_URL"]
 
-    assert source["property"] == "connectionString"
-    assert source["name"] in {db["name"] for db in blueprint["databases"]}
+    assert database_url["sync"] is False
+    assert "value" not in database_url

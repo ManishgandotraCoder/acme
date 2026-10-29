@@ -57,8 +57,9 @@ and the chat explains that the assistant is unavailable.
 **Docker (everything: app, PostgreSQL, Ollama):** `make docker-up` → http://localhost:8000.
 The container runs migrations, seeds on first boot only, then serves the UI and the API.
 
-**Deploy (Render):** Dashboard → *New* → *Blueprint* → pick this repo. [render.yaml](render.yaml)
-provisions PostgreSQL 17 and a web service from the Dockerfile, and wires the database URL in.
+**Deploy (Render + Neon):** create a free [Neon](https://neon.tech) PostgreSQL database, then
+Render Dashboard → *New* → *Blueprint* → pick this repo and paste the Neon connection string as
+`SALARY_DATABASE_URL`. [render.yaml](render.yaml) builds a web service from the Dockerfile.
 The first boot migrates and seeds 10,000 employees. Ollama isn't hosted there: set
 `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (and `SALARY_LLM_PROVIDER`) in the dashboard to enable
 Ask Salary Data; without a key it reports itself unavailable while everything else works. A demo script is in

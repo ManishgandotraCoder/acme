@@ -19,4 +19,4 @@ hosted Render copy needs a Claude or OpenAI key for the assistant; use it to sho
 | 12 | 4:30 | Terminal: `make check`; `tests/benchmark/test_salary_questions.py` | 314 tests on real PostgreSQL in seconds. The benchmark checks every answer against values recomputed from the seed generator. Query-plan tests keep every read path indexed. |
 | 13 | 5:00 | `git log --oneline --reverse` | Test-first slices; `fix:` commits record what running the real system revealed. |
 | 14 | 5:20 | docs/AI_USAGE.md, "Where AI output was wrong" and "Second round" | How AI was used, and how its mistakes were caught: real runs, screenshots, regression tests, CLAUDE.md rules. |
-| 15 | 5:45 | Render URL | Deployed from render.yaml: same Docker image, managed Postgres. |
+| 15 | 5:45 | Render URL | Deployed from render.yaml: same Docker image, PostgreSQL on Neon. |
