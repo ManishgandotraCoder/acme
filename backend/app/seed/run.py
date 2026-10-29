@@ -1,0 +1,44 @@
+"""Seed the database: ``python -m app.seed.run --count 10000 --reset``."""
+
+import argparse
+import random
+import time
+
+from sqlalchemy import delete, insert
+from sqlalchemy.orm import Session
+
+from app.config import get_settings
+from app.db import create_schema, make_engine, make_session_factory
+from app.models import Employee, SalaryChange
+from app.seed.generator import generate_employees, load_names
+
+
+def seed_database(session: Session, *, count: int, seed: int = 42, reset: bool = False) -> int:
+    if reset:
+        session.execute(delete(SalaryChange))
+        session.execute(delete(Employee))
+    first, last = load_names()
+    rows = generate_employees(count, random.Random(seed), first, last)
+    # Core bulk insert in one transaction: ~10x faster than adding ORM objects one by one.
+    session.execute(insert(Employee), rows)
+    session.commit()
+    return len(rows)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--count", type=int, default=10_000)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--reset", action="store_true", help="delete existing employees first")
+    args = parser.parse_args()
+
+    engine = make_engine(get_settings().database_url)
+    create_schema(engine)
+    started = time.perf_counter()
+    with make_session_factory(engine)() as session:
+        inserted = seed_database(session, count=args.count, seed=args.seed, reset=args.reset)
+    print(f"Seeded {inserted:,} employees in {time.perf_counter() - started:.2f}s")
+
+
+if __name__ == "__main__":
+    main()
