@@ -1,6 +1,6 @@
 import { Alert, Autocomplete, Button, Group, NumberInput, Select, SimpleGrid, Stack, TextInput } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import type { Employee, EmployeeInput, EmployeeUpdate, Meta } from '../../api'
+import type { Employee, EmployeeInput, EmployeeUpdate, Meta } from '@/features/employees/types'
 
 interface FormValues {
   full_name: string

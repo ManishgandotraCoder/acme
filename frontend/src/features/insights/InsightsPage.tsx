@@ -2,12 +2,12 @@ import { BarChart } from '@mantine/charts'
 import { Alert, Group, Paper, Select, SimpleGrid, Skeleton, Stack, Table, Text, Title } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { api } from '../../api'
-import { formatMoney, formatNumber } from '../../lib/format'
+import { formatMoney, formatNumber } from '@/shared/lib/format'
+import { insightsApi } from '@/features/insights/api'
 
 export function InsightsPage() {
-  const summary = useQuery({ queryKey: ['insights', 'summary'], queryFn: api.summary })
-  const countries = useQuery({ queryKey: ['insights', 'countries'], queryFn: api.countryStats })
+  const summary = useQuery({ queryKey: ['insights', 'summary'], queryFn: insightsApi.summary })
+  const countries = useQuery({ queryKey: ['insights', 'countries'], queryFn: insightsApi.countries })
 
   const error = summary.error ?? countries.error
   return (
@@ -86,7 +86,7 @@ function JobTitlesSection({ countries }: { countries: string[] }) {
   const country = selected ?? countries[0] ?? null
   const stats = useQuery({
     queryKey: ['insights', 'job-titles', country],
-    queryFn: () => api.jobTitleStats(country!),
+    queryFn: () => insightsApi.jobTitles(country!),
     enabled: country !== null,
   })
 
@@ -130,7 +130,7 @@ function DepartmentsSection({ countries }: { countries: string[] }) {
   const [country, setCountry] = useState<string | null>(null)
   const stats = useQuery({
     queryKey: ['insights', 'departments', country],
-    queryFn: () => api.departmentStats(country ?? undefined),
+    queryFn: () => insightsApi.departments(country ?? undefined),
   })
 
   return (

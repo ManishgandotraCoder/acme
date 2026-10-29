@@ -1,4 +1,4 @@
-// Mirrors backend/app/schemas.py
+// Mirrors backend/app/modules/employees/schemas.py
 
 export interface Employee {
   id: number
@@ -31,13 +31,6 @@ export interface SalaryChange {
   changed_at: string
 }
 
-export interface Page<T> {
-  items: T[]
-  total: number
-  page: number
-  page_size: number
-}
-
 export type SortField = 'full_name' | 'annual_salary' | 'hire_date'
 
 export interface EmployeeQuery {
@@ -55,51 +48,4 @@ export interface Meta {
   countries: { name: string; currency: string }[]
   departments: string[]
   job_titles: string[]
-}
-
-export interface OrgSummary {
-  headcount: number
-  country_count: number
-  total_payroll_usd: number
-  average_salary_usd: number
-  fx_rates_as_of: string
-}
-
-export interface CountryStats {
-  country: string
-  currency: string
-  headcount: number
-  min_salary: number
-  max_salary: number
-  average_salary: number
-  median_salary: number
-  average_salary_usd: number
-}
-
-export interface JobTitleStats {
-  job_title: string
-  currency: string
-  headcount: number
-  min_salary: number
-  max_salary: number
-  average_salary: number
-}
-
-export interface DepartmentStats {
-  department: string
-  headcount: number
-  total_payroll_usd: number
-  average_salary_usd: number
-}
-
-export interface AskResult {
-  question: string
-  answer: string
-  intent: {
-    metric: string
-    country: string | null
-    job_title: string | null
-    department: string | null
-  }
-  data: Record<string, unknown>[]
 }

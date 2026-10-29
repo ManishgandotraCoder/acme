@@ -2,8 +2,8 @@ import { Alert, Badge, Button, Group, Paper, Stack, Text, Textarea, Title } from
 import { IconSparkles } from '@tabler/icons-react'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import { api } from '../../api'
-import type { AskResult } from '../../api'
+import { assistantApi } from '@/features/assistant/api'
+import type { AskResult } from '@/features/assistant/types'
 
 const EXAMPLES = [
   'What is the average salary of data analysts in Germany?',
@@ -25,7 +25,7 @@ export function AskPage() {
   const [question, setQuestion] = useState('')
   const [answers, setAnswers] = useState<AskResult[]>([])
   const ask = useMutation({
-    mutationFn: (q: string) => api.ask(q),
+    mutationFn: (q: string) => assistantApi.ask(q),
     onSuccess: (result) => setAnswers((previous) => [result, ...previous]),
   })
 

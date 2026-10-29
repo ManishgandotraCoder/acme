@@ -1,8 +1,9 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { api, ApiError } from '../../api'
-import { renderWithProviders } from '../../test/render'
+import { renderWithProviders } from '@/test/render'
 import { AskPage } from './AskPage'
+import { assistantApi } from '@/features/assistant/api'
+import { ApiError } from '@/shared/api/client'
 
 const result = {
   question: 'What do data analysts earn in Germany?',
@@ -13,7 +14,7 @@ const result = {
 
 describe('AskPage', () => {
   it('answers a typed question and shows how it was interpreted', async () => {
-    const ask = vi.spyOn(api, 'ask').mockResolvedValue(result)
+    const ask = vi.spyOn(assistantApi, 'ask').mockResolvedValue(result)
     const { user } = renderWithProviders(<AskPage />)
 
     await user.type(screen.getByLabelText(/your question/i), 'What do data analysts earn in Germany?')
@@ -26,7 +27,7 @@ describe('AskPage', () => {
   })
 
   it('lets the user ask an example question with one click', async () => {
-    const ask = vi.spyOn(api, 'ask').mockResolvedValue(result)
+    const ask = vi.spyOn(assistantApi, 'ask').mockResolvedValue(result)
     const { user } = renderWithProviders(<AskPage />)
 
     await user.click(screen.getByRole('button', { name: /which department has the highest average pay/i }))
@@ -35,7 +36,7 @@ describe('AskPage', () => {
   })
 
   it('explains when the AI assistant is unavailable', async () => {
-    vi.spyOn(api, 'ask').mockRejectedValue(
+    vi.spyOn(assistantApi, 'ask').mockRejectedValue(
       new ApiError(503, 'The AI assistant is unavailable right now. Is Ollama running?'),
     )
     const { user } = renderWithProviders(<AskPage />)
@@ -48,7 +49,7 @@ describe('AskPage', () => {
   })
 
   it('does not submit an empty question', async () => {
-    const ask = vi.spyOn(api, 'ask')
+    const ask = vi.spyOn(assistantApi, 'ask')
     renderWithProviders(<AskPage />)
     expect(screen.getByRole('button', { name: /ask/i })).toBeDisabled()
     expect(ask).not.toHaveBeenCalled()

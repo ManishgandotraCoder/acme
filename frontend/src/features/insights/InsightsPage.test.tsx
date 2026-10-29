@@ -1,19 +1,19 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { api } from '../../api'
-import { renderWithProviders } from '../../test/render'
+import { renderWithProviders } from '@/test/render'
 import { InsightsPage } from './InsightsPage'
+import { insightsApi } from '@/features/insights/api'
 
 describe('InsightsPage', () => {
   beforeEach(() => {
-    vi.spyOn(api, 'summary').mockResolvedValue({
+    vi.spyOn(insightsApi, 'summary').mockResolvedValue({
       headcount: 10000,
       country_count: 10,
       total_payroll_usd: 834375686,
       average_salary_usd: 83438,
       fx_rates_as_of: '2026-10-01',
     })
-    vi.spyOn(api, 'countryStats').mockResolvedValue([
+    vi.spyOn(insightsApi, 'countries').mockResolvedValue([
       {
         country: 'India',
         currency: 'INR',
@@ -25,10 +25,10 @@ describe('InsightsPage', () => {
         average_salary_usd: 30000,
       },
     ])
-    vi.spyOn(api, 'jobTitleStats').mockResolvedValue([
+    vi.spyOn(insightsApi, 'jobTitles').mockResolvedValue([
       { job_title: 'Data Analyst', currency: 'INR', headcount: 80, min_salary: 1500000, max_salary: 3000000, average_salary: 2200000 },
     ])
-    vi.spyOn(api, 'departmentStats').mockResolvedValue([
+    vi.spyOn(insightsApi, 'departments').mockResolvedValue([
       { department: 'Engineering', headcount: 3500, total_payroll_usd: 384000000, average_salary_usd: 109860 },
     ])
   })
@@ -53,7 +53,7 @@ describe('InsightsPage', () => {
   it('loads job title pay for the first country by default', async () => {
     renderWithProviders(<InsightsPage />)
 
-    await waitFor(() => expect(api.jobTitleStats).toHaveBeenCalledWith('India'))
+    await waitFor(() => expect(insightsApi.jobTitles).toHaveBeenCalledWith('India'))
     const row = await screen.findByRole('row', { name: /data analyst/i })
     expect(within(row).getByText('INR 2,200,000')).toBeInTheDocument()
   })

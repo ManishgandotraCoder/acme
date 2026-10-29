@@ -1,9 +1,10 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { api, ApiError } from '../../api'
-import { buildEmployee, meta } from '../../test/fixtures'
-import { renderWithProviders } from '../../test/render'
+import { buildEmployee, meta } from '@/test/fixtures'
+import { renderWithProviders } from '@/test/render'
 import { EmployeesPage } from './EmployeesPage'
+import { employeesApi } from '@/features/employees/api'
+import { ApiError } from '@/shared/api/client'
 
 const page = (items = [buildEmployee()], total = items.length) => ({
   items,
@@ -14,12 +15,12 @@ const page = (items = [buildEmployee()], total = items.length) => ({
 
 describe('EmployeesPage', () => {
   beforeEach(() => {
-    vi.spyOn(api, 'meta').mockResolvedValue(meta)
-    vi.spyOn(api, 'listEmployees').mockResolvedValue(page())
+    vi.spyOn(employeesApi, 'meta').mockResolvedValue(meta)
+    vi.spyOn(employeesApi, 'list').mockResolvedValue(page())
   })
 
   it('lists employees with salary in local currency and the total count', async () => {
-    vi.spyOn(api, 'listEmployees').mockResolvedValue(page([buildEmployee()], 10000))
+    vi.spyOn(employeesApi, 'list').mockResolvedValue(page([buildEmployee()], 10000))
     renderWithProviders(<EmployeesPage />)
 
     const row = await screen.findByRole('row', { name: /ada lovelace/i })
@@ -34,14 +35,14 @@ describe('EmployeesPage', () => {
     await user.type(screen.getByPlaceholderText(/search/i), 'grace')
 
     await waitFor(() =>
-      expect(api.listEmployees).toHaveBeenLastCalledWith(
+      expect(employeesApi.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: 'grace', page: 1 }),
       ),
     )
   })
 
   it('deletes an employee after confirmation', async () => {
-    const remove = vi.spyOn(api, 'deleteEmployee').mockResolvedValue(undefined)
+    const remove = vi.spyOn(employeesApi, 'remove').mockResolvedValue(undefined)
     const { user } = renderWithProviders(<EmployeesPage />)
 
     await user.click(await screen.findByRole('button', { name: /delete ada lovelace/i }))
@@ -52,7 +53,7 @@ describe('EmployeesPage', () => {
   })
 
   it('shows salary history for an employee', async () => {
-    vi.spyOn(api, 'salaryHistory').mockResolvedValue([
+    vi.spyOn(employeesApi, 'salaryHistory').mockResolvedValue([
       {
         id: 1,
         previous_salary: 80000,
@@ -72,7 +73,7 @@ describe('EmployeesPage', () => {
   })
 
   it('shows an error when employees cannot be loaded', async () => {
-    vi.spyOn(api, 'listEmployees').mockRejectedValue(new ApiError(500, 'Database unavailable'))
+    vi.spyOn(employeesApi, 'list').mockRejectedValue(new ApiError(500, 'Database unavailable'))
     renderWithProviders(<EmployeesPage />)
 
     expect(await screen.findByText('Database unavailable')).toBeInTheDocument()

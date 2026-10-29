@@ -18,17 +18,17 @@ import { useDebouncedValue } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import { IconHistory, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import { useState } from 'react'
-import type { Employee, EmployeeInput, EmployeeQuery, EmployeeUpdate } from '../../api'
-import { formatDate, formatMoney, formatNumber } from '../../lib/format'
-import { EmployeeForm } from './EmployeeForm'
-import { SalaryHistoryDrawer } from './SalaryHistoryDrawer'
+import { formatDate, formatMoney, formatNumber } from '@/shared/lib/format'
+import { EmployeeForm } from './components/EmployeeForm'
+import { SalaryHistoryDrawer } from './components/SalaryHistoryDrawer'
 import {
   useCreateEmployee,
   useDeleteEmployee,
   useEmployees,
   useMeta,
   useUpdateEmployee,
-} from './useEmployees'
+} from './hooks'
+import type { Employee, EmployeeInput, EmployeeQuery, EmployeeUpdate } from '@/features/employees/types'
 
 const PAGE_SIZE = 25
 

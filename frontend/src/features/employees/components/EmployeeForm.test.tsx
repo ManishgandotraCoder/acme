@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { buildEmployee, meta } from '../../test/fixtures'
-import { renderWithProviders } from '../../test/render'
+import { buildEmployee, meta } from '@/test/fixtures'
+import { renderWithProviders } from '@/test/render'
 import { EmployeeForm } from './EmployeeForm'
 
 describe('EmployeeForm (create)', () => {

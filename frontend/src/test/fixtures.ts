@@ -1,4 +1,4 @@
-import type { Employee, Meta } from '../api'
+import type { Employee, Meta } from '@/features/employees/types'
 
 export const meta: Meta = {
   countries: [

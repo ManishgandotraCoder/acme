@@ -1,7 +1,7 @@
 import { Alert, Drawer, Loader, Text, Timeline } from '@mantine/core'
-import type { Employee } from '../../api'
-import { formatDate, formatMoney } from '../../lib/format'
-import { useSalaryHistory } from './useEmployees'
+import { formatDate, formatMoney } from '@/shared/lib/format'
+import { useSalaryHistory } from '../hooks'
+import type { Employee } from '@/features/employees/types'
 
 export function SalaryHistoryDrawer({ employee, onClose }: { employee: Employee | null; onClose: () => void }) {
   const history = useSalaryHistory(employee?.id ?? null)

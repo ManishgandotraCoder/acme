@@ -5,9 +5,9 @@ import { lazy, Suspense } from 'react'
 import { NavLink as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 // Route-level code splitting: the charting library is only downloaded for Pay insights.
-const EmployeesPage = lazy(() => import('./features/employees/EmployeesPage').then((m) => ({ default: m.EmployeesPage })))
-const InsightsPage = lazy(() => import('./features/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })))
-const AskPage = lazy(() => import('./features/ask/AskPage').then((m) => ({ default: m.AskPage })))
+const EmployeesPage = lazy(() => import('@/features/employees/EmployeesPage').then((m) => ({ default: m.EmployeesPage })))
+const InsightsPage = lazy(() => import('@/features/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })))
+const AskPage = lazy(() => import('@/features/assistant/AskPage').then((m) => ({ default: m.AskPage })))
 
 const NAV = [
   { to: '/employees', label: 'Employees', icon: IconUsers },

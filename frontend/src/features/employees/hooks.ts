@@ -1,20 +1,21 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api } from '../../api'
-import type { EmployeeInput, EmployeeQuery, EmployeeUpdate } from '../../api'
+import type { EmployeeUpdate } from '@/features/employees/types'
+import { employeesApi } from '@/features/employees/api'
+import type { EmployeeInput, EmployeeQuery } from '@/features/employees/types'
 
-export const useMeta = () => useQuery({ queryKey: ['meta'], queryFn: api.meta, staleTime: 5 * 60_000 })
+export const useMeta = () => useQuery({ queryKey: ['meta'], queryFn: employeesApi.meta, staleTime: 5 * 60_000 })
 
 export const useEmployees = (query: EmployeeQuery) =>
   useQuery({
     queryKey: ['employees', query],
-    queryFn: () => api.listEmployees(query),
+    queryFn: () => employeesApi.list(query),
     placeholderData: keepPreviousData, // keep the table steady while paging/filtering
   })
 
 export const useSalaryHistory = (id: number | null) =>
   useQuery({
     queryKey: ['salary-history', id],
-    queryFn: () => api.salaryHistory(id!),
+    queryFn: () => employeesApi.salaryHistory(id!),
     enabled: id !== null,
   })
 
@@ -31,18 +32,18 @@ function useInvalidateAfterWrite() {
 
 export function useCreateEmployee() {
   const onSuccess = useInvalidateAfterWrite()
-  return useMutation({ mutationFn: (body: EmployeeInput) => api.createEmployee(body), onSuccess })
+  return useMutation({ mutationFn: (body: EmployeeInput) => employeesApi.create(body), onSuccess })
 }
 
 export function useUpdateEmployee() {
   const onSuccess = useInvalidateAfterWrite()
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: EmployeeUpdate }) => api.updateEmployee(id, body),
+    mutationFn: ({ id, body }: { id: number; body: EmployeeUpdate }) => employeesApi.update(id, body),
     onSuccess,
   })
 }
 
 export function useDeleteEmployee() {
   const onSuccess = useInvalidateAfterWrite()
-  return useMutation({ mutationFn: (id: number) => api.deleteEmployee(id), onSuccess })
+  return useMutation({ mutationFn: (id: number) => employeesApi.remove(id), onSuccess })
 }
