@@ -15,7 +15,7 @@ export function renderWithProviders(ui: ReactElement) {
     user: userEvent.setup(),
     ...render(
       <QueryClientProvider client={queryClient}>
-        <MantineProvider>
+        <MantineProvider env="test">
           <Notifications />
           <MemoryRouter>{ui}</MemoryRouter>
         </MantineProvider>
