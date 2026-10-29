@@ -6,6 +6,8 @@ Expects a migrated schema (``alembic upgrade head``).
 import argparse
 import random
 import time
+from datetime import UTC, datetime
+from datetime import time as clock
 
 from sqlalchemy import delete, exists, insert, select
 from sqlalchemy.orm import Session
@@ -13,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import make_engine, make_session_factory
 from app.modules.employees.models import Employee, SalaryChange
-from app.seed.generator import generate_employees, load_names
+from app.seed.generator import generate_employees, generate_salary_history, load_names
 
 
 def seed_database(
@@ -30,9 +32,27 @@ def seed_database(
         session.execute(delete(SalaryChange))
         session.execute(delete(Employee))
     first, last = load_names()
-    rows = generate_employees(count, random.Random(seed), first, last)
-    # Core bulk insert in one transaction: ~10x faster than adding ORM objects one by one.
-    session.execute(insert(Employee), rows)
+    rng = random.Random(seed)
+    rows = generate_employees(count, rng, first, last)
+    history = generate_salary_history(rows, rng)
+
+    # Core bulk inserts in one transaction: ~10x faster than adding ORM objects one by one.
+    # sort_by_parameter_order returns ids in input order, to link each history row.
+    ids = session.scalars(
+        insert(Employee).returning(Employee.id, sort_by_parameter_order=True), rows
+    ).all()
+    if history:
+        session.execute(
+            insert(SalaryChange),
+            [
+                {
+                    **{k: v for k, v in change.items() if k != "employee_index"},
+                    "employee_id": ids[change["employee_index"]],
+                    "changed_at": datetime.combine(change["effective_date"], clock(9), UTC),
+                }
+                for change in history
+            ],
+        )
     session.commit()
     return len(rows)
 

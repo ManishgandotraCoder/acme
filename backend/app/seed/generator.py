@@ -83,6 +83,16 @@ LEVEL_WEIGHTS = (0.20, 0.35, 0.25, 0.15, 0.05)
 HIRE_DATE_START = date(2010, 1, 1)
 HIRE_DATE_END = date(2026, 9, 30)  # fixed so output is reproducible
 
+# Two years of salary history, so "last 12 months" trends have data. Fixed dates keep the seed
+# reproducible; trend questions take an explicit "as of" date in tests.
+HISTORY_START = date(2024, 10, 1)
+HISTORY_END = HIRE_DATE_END
+HISTORY_AUTHOR = "HRIS import"
+# reason -> (probability per review cycle, raise range)
+_REVIEW = ("Annual review", (0.02, 0.06))
+_PROMOTION = ("Promotion", (0.08, 0.15))
+_PROMOTION_RATE = 0.12
+
 
 def load_names() -> tuple[list[str], list[str]]:
     def read(name: str) -> list[str]:
@@ -140,3 +150,47 @@ def _local_salary(us_usd: float, country: str) -> int:
     local = us_usd * COUNTRY_PROFILE[country][1] / info.usd_rate
     step = 10_000 if local >= 1_000_000 else 500  # INR/JPY salaries round to bigger steps
     return max(step, round(local / step) * step)
+
+
+def generate_salary_history(employees: list[dict], rng: random.Random) -> list[dict]:
+    """Past salary changes for generated employees, ending at each one's current salary.
+
+    Each employee has up to one review per year in the window (after their hire date), some of
+    them promotions. Amounts are derived backwards from the current salary, so the newest change
+    always lands on ``annual_salary``. Rows carry ``employee_index`` (position in
+    ``employees``); the caller maps it to a database id.
+    """
+    history = []
+    for index, employee in enumerate(employees):
+        dates = _review_dates(employee["hire_date"], rng)
+        salary = employee["annual_salary"]
+        for effective in reversed(dates):  # newest first, walking back in time
+            reason, (low, high) = _PROMOTION if rng.random() < _PROMOTION_RATE else _REVIEW
+            previous = round(salary / (1 + rng.uniform(low, high)))
+            history.append(
+                {
+                    "employee_index": index,
+                    "previous_salary": previous,
+                    "new_salary": salary,
+                    "previous_currency": employee["currency"],
+                    "new_currency": employee["currency"],
+                    "reason": reason,
+                    "effective_date": effective,
+                    "changed_by": HISTORY_AUTHOR,
+                }
+            )
+            salary = previous
+    return history
+
+
+def _review_dates(hired: date, rng: random.Random) -> list[date]:
+    """One review date per year of the history window that the employee was present for."""
+    dates = []
+    year_start = HISTORY_START
+    while year_start <= HISTORY_END:
+        offset = rng.randrange(365)
+        effective = min(year_start + timedelta(days=offset), HISTORY_END)
+        if effective >= hired and rng.random() < 0.85:  # some reviews bring no raise
+            dates.append(effective)
+        year_start = year_start.replace(year=year_start.year + 1)
+    return dates
