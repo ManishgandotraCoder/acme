@@ -5,7 +5,8 @@ BACKEND := cd backend &&
 FRONTEND := cd frontend &&
 
 .PHONY: help setup dev-api dev-web test test-api test-web lint format check \
-        db-up db-down db-migrate db-seed db-reset db-shell migration docker-up docker-down
+        db-up db-down db-migrate db-seed db-reset db-shell migration docker-up docker-down \
+        benchmark-llm
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -37,6 +38,9 @@ format: ## Auto-format backend code
 	$(BACKEND) uv run ruff check --fix . && uv run ruff format .
 
 check: lint test ## What CI runs
+
+benchmark-llm: ## Ask the predefined questions to a real model (needs `make dev-api`): provider=anthropic
+	$(BACKEND) uv run python -m tests.benchmark.live $(if $(provider),--provider $(provider))
 
 db-up: ## Start local Postgres (docker compose, port 5433)
 	docker compose up -d --wait postgres
