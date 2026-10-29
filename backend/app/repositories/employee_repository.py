@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, case, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.domain.countries import SUPPORTED_COUNTRIES
 from app.models import Employee
 
 
@@ -53,7 +54,9 @@ class EmployeeRepository:
         base = self._apply_filters(select(Employee), filters)
         total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
 
-        sort_column = getattr(Employee, sort.value)
+        sort_column = (
+            _salary_in_usd() if sort is SortField.ANNUAL_SALARY else getattr(Employee, sort.value)
+        )
         order = sort_column.desc() if descending else sort_column.asc()
         stmt = (
             base.order_by(order, Employee.id)  # id tie-breaker keeps paging stable
@@ -83,3 +86,9 @@ class EmployeeRepository:
         if f.job_title:
             stmt = stmt.where(Employee.job_title == f.job_title)
         return stmt
+
+
+def _salary_in_usd():
+    """Salaries are in local currency; ranking them must compare like with like."""
+    rates = {c.name: c.usd_rate for c in SUPPORTED_COUNTRIES}
+    return Employee.annual_salary * case(rates, value=Employee.country, else_=1.0)

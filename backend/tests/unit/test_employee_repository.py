@@ -95,3 +95,25 @@ def test_delete_removes_employee(session):
     session.commit()
 
     assert repo.get(employee.id) is None
+
+
+def test_salary_sort_compares_across_currencies_in_usd(session):
+    _seed(
+        session,
+        # 5,000,000 INR ~= 60,000 USD -- numerically largest, but not the best paid.
+        build_employee(
+            email="a@example.com", country="India", currency="INR", annual_salary=5_000_000
+        ),
+        build_employee(
+            email="b@example.com", country="United States", currency="USD", annual_salary=90_000
+        ),
+        build_employee(
+            email="c@example.com", country="Germany", currency="EUR", annual_salary=70_000
+        ),
+    )
+
+    items, _ = EmployeeRepository(session).search(
+        EmployeeFilter(), sort=SortField.ANNUAL_SALARY, descending=True
+    )
+
+    assert [e.country for e in items] == ["United States", "Germany", "India"]

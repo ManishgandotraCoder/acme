@@ -34,8 +34,8 @@ const PAGE_SIZE = 25
 
 const SORT_OPTIONS = [
   { value: 'full_name:asc', label: 'Name (A–Z)' },
-  { value: 'annual_salary:desc', label: 'Salary (high → low)' },
-  { value: 'annual_salary:asc', label: 'Salary (low → high)' },
+  { value: 'annual_salary:desc', label: 'Salary, in USD terms (high → low)' },
+  { value: 'annual_salary:asc', label: 'Salary, in USD terms (low → high)' },
   { value: 'hire_date:desc', label: 'Newest hires' },
   { value: 'hire_date:asc', label: 'Longest tenure' },
 ]
