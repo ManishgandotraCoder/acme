@@ -17,6 +17,7 @@ from app.core.logging import REQUEST_ID_HEADER, configure_logging, install_reque
 from app.modules.assistant.llm import LLMClient
 from app.modules.assistant.ollama import OllamaClient
 from app.modules.assistant.router import router as assistant_router
+from app.modules.employees import models as _employee_models  # noqa: F401  (register tables)
 from app.modules.employees.router import router as employees_router
 from app.modules.insights.router import router as insights_router
 

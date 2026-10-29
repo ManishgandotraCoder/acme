@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
-from app.core.dependencies import LLMDep, SessionDep
+from app.core.dependencies import SessionDep
+from app.modules.assistant.dependencies import LLMDep
 from app.modules.assistant.schemas import AskRequest, AskResult
 from app.modules.assistant.service import AskService
 

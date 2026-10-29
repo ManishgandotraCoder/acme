@@ -35,8 +35,7 @@ def make_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def create_schema(engine: Engine) -> None:
-    from app.modules.employees import models  # noqa: F401  (register mappers)
-
+    """Create all tables registered on ``Base`` (tests/dev only; production uses Alembic)."""
     Base.metadata.create_all(engine)
 
 
