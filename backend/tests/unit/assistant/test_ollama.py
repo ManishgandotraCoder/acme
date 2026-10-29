@@ -3,8 +3,8 @@ import json
 import httpx
 import pytest
 
-from app.ai.llm import LLMUnavailableError
-from app.ai.ollama_client import OllamaClient
+from app.modules.assistant.llm import LLMUnavailableError
+from app.modules.assistant.ollama import OllamaClient
 
 
 def _client(handler) -> OllamaClient:

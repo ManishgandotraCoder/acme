@@ -2,11 +2,18 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, status
 
-from app.api.deps import SessionDep
-from app.domain.countries import SUPPORTED_COUNTRIES
-from app.repositories.employee_repository import EmployeeFilter, EmployeeRepository, SortField
-from app.schemas import EmployeeCreate, EmployeeOut, EmployeeUpdate, Meta, Page, SalaryChangeOut
-from app.services.employee_service import EmployeeService
+from app.core.dependencies import SessionDep
+from app.core.pagination import Page
+from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
+from app.modules.employees.schemas import (
+    EmployeeCreate,
+    EmployeeOut,
+    EmployeeUpdate,
+    Meta,
+    SalaryChangeOut,
+)
+from app.modules.employees.service import EmployeeService
+from app.shared.countries import SUPPORTED_COUNTRIES
 
 router = APIRouter(prefix="/api", tags=["employees"])
 

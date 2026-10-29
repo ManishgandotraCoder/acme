@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
-from app.domain.countries import get_country
+from app.shared.countries import get_country
 
 
 def _supported_country(value: str) -> str:
@@ -75,51 +75,6 @@ class SalaryChangeOut(BaseModel):
     new_currency: str
     reason: str | None
     changed_at: datetime
-
-
-class Page[T](BaseModel):
-    items: list[T]
-    total: int
-    page: int
-    page_size: int
-
-
-# --- Insights -------------------------------------------------------------------------
-
-
-class OrgSummary(BaseModel):
-    headcount: int
-    country_count: int
-    total_payroll_usd: int
-    average_salary_usd: int
-    fx_rates_as_of: str
-
-
-class CountryStats(BaseModel):
-    country: str
-    currency: str
-    headcount: int
-    min_salary: int
-    max_salary: int
-    average_salary: int
-    median_salary: int
-    average_salary_usd: int
-
-
-class JobTitleStats(BaseModel):
-    job_title: str
-    currency: str
-    headcount: int
-    min_salary: int
-    max_salary: int
-    average_salary: int
-
-
-class DepartmentStats(BaseModel):
-    department: str
-    headcount: int
-    total_payroll_usd: int
-    average_salary_usd: int
 
 
 class CountryOption(BaseModel):

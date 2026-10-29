@@ -1,6 +1,6 @@
 import pytest
 
-from app.domain.countries import (
+from app.shared.countries import (
     SUPPORTED_COUNTRIES,
     UnsupportedCountryError,
     currency_for,

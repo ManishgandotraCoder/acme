@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from app.api.deps import SessionDep
-from app.schemas import CountryStats, DepartmentStats, JobTitleStats, OrgSummary
-from app.services.insights_service import InsightsService
+from app.core.dependencies import SessionDep
+from app.modules.insights.schemas import CountryStats, DepartmentStats, JobTitleStats, OrgSummary
+from app.modules.insights.service import InsightsService
 
 router = APIRouter(prefix="/api/insights", tags=["insights"])
 

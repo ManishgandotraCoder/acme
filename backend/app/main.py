@@ -8,12 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.ai.llm import LLMClient
-from app.ai.ollama_client import OllamaClient
-from app.api import ask, employees, insights
-from app.api.errors import register_error_handlers
-from app.config import Settings, get_settings
-from app.db import create_schema, make_engine, make_session_factory
+from app.core.config import Settings, get_settings
+from app.core.database import create_schema, make_engine, make_session_factory
+from app.core.http_errors import register_error_handlers
+from app.modules.assistant.llm import LLMClient
+from app.modules.assistant.ollama import OllamaClient
+from app.modules.assistant.router import router as assistant_router
+from app.modules.employees.router import router as employees_router
+from app.modules.insights.router import router as insights_router
 
 
 def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -> FastAPI:
@@ -50,8 +52,8 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    for module in (employees, insights, ask):
-        app.include_router(module.router)
+    for router in (employees_router, insights_router, assistant_router):
+        app.include_router(router)
     if settings.static_dir:
         _serve_frontend(app, Path(settings.static_dir))
     return app

@@ -1,7 +1,7 @@
 import pytest
 
-from app.domain.countries import UnsupportedCountryError
-from app.services.insights_service import InsightsService
+from app.modules.insights.service import InsightsService
+from app.shared.countries import UnsupportedCountryError
 from tests.conftest import build_employee
 
 

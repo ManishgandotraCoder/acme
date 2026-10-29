@@ -8,7 +8,7 @@ import random
 from datetime import date, timedelta
 from pathlib import Path
 
-from app.domain.countries import get_country
+from app.shared.countries import get_country
 
 DATA_DIR = Path(__file__).parent / "data"
 

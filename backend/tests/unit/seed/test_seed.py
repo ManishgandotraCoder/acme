@@ -3,10 +3,10 @@ from datetime import date
 
 from sqlalchemy import func, select
 
-from app.domain.countries import currency_for
-from app.models import Employee
+from app.modules.employees.models import Employee
 from app.seed.generator import generate_employees, load_names
 from app.seed.run import seed_database
+from app.shared.countries import currency_for
 
 FIRST = ["Ada", "Alan", "Grace"]
 LAST = ["Hopper", "Turing", "Lovelace"]

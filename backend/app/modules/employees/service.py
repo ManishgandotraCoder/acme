@@ -1,10 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.countries import currency_for
-from app.models import Employee, SalaryChange
-from app.repositories.employee_repository import EmployeeFilter, EmployeeRepository, SortField
-from app.schemas import EmployeeCreate, EmployeeUpdate
+from app.modules.employees.models import Employee, SalaryChange
+from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
+from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
+from app.shared.countries import currency_for
 
 
 class EmployeeNotFoundError(LookupError):

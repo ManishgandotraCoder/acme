@@ -4,8 +4,8 @@ from datetime import date
 import pytest
 from sqlalchemy.orm import Session
 
-from app.db import create_schema, make_engine, make_session_factory
-from app.models import Employee
+from app.core.database import create_schema, make_engine, make_session_factory
+from app.modules.employees.models import Employee
 
 
 @pytest.fixture

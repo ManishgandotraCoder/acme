@@ -2,8 +2,8 @@ from datetime import date
 
 import pytest
 
-from app.schemas import EmployeeCreate, EmployeeUpdate
-from app.services.employee_service import (
+from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
+from app.modules.employees.service import (
     CurrencyChangeRequiresSalaryError,
     DuplicateEmailError,
     EmployeeNotFoundError,

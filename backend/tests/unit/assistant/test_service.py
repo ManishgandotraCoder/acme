@@ -1,7 +1,7 @@
 import pytest
 
-from app.ai.ask_service import AskService, QueryIntent
-from app.ai.llm import LLMUnavailableError
+from app.modules.assistant.llm import LLMUnavailableError
+from app.modules.assistant.service import AskService, QueryIntent
 from tests.conftest import build_employee
 
 

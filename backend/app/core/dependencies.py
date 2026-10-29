@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
-from app.ai.llm import LLMClient
+from app.modules.assistant.llm import LLMClient
 
 
 def get_session(request: Request) -> Iterator[Session]:

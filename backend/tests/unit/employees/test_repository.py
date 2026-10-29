@@ -1,4 +1,4 @@
-from app.repositories.employee_repository import EmployeeFilter, EmployeeRepository, SortField
+from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
 from tests.conftest import build_employee
 
 

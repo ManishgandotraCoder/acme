@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import EmployeeCreate, EmployeeUpdate
+from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
 
 VALID = dict(
     full_name="  Ada Lovelace  ",

@@ -7,9 +7,9 @@ import time
 from sqlalchemy import delete, exists, insert, select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
-from app.db import create_schema, make_engine, make_session_factory
-from app.models import Employee, SalaryChange
+from app.core.config import get_settings
+from app.core.database import create_schema, make_engine, make_session_factory
+from app.modules.employees.models import Employee, SalaryChange
 from app.seed.generator import generate_employees, load_names
 
 

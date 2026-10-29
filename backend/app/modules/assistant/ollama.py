@@ -2,7 +2,7 @@ import json
 
 import httpx
 
-from app.ai.llm import LLMUnavailableError
+from app.modules.assistant.llm import LLMUnavailableError
 
 
 class OllamaClient:

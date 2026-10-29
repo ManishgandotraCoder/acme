@@ -10,9 +10,9 @@ from statistics import median
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.domain.countries import FX_RATES_AS_OF, currency_for, get_country, to_usd
-from app.models import Employee
-from app.schemas import CountryStats, DepartmentStats, JobTitleStats, OrgSummary
+from app.modules.employees.models import Employee
+from app.modules.insights.schemas import CountryStats, DepartmentStats, JobTitleStats, OrgSummary
+from app.shared.countries import FX_RATES_AS_OF, currency_for, get_country, to_usd
 
 
 class InsightsService:

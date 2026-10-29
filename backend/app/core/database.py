@@ -35,7 +35,7 @@ def make_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def create_schema(engine: Engine) -> None:
-    from app import models  # noqa: F401  (register mappers)
+    from app.modules.employees import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(engine)
 

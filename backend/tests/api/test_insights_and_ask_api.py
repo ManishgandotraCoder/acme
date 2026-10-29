@@ -1,4 +1,4 @@
-from app.ai.llm import LLMUnavailableError
+from app.modules.assistant.llm import LLMUnavailableError
 
 
 def test_insight_endpoints(client, create_employee):

@@ -4,8 +4,8 @@ from enum import StrEnum
 from sqlalchemy import Select, case, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.domain.countries import SUPPORTED_COUNTRIES
-from app.models import Employee
+from app.modules.employees.models import Employee
+from app.shared.countries import SUPPORTED_COUNTRIES
 
 
 class SortField(StrEnum):

@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.ai.llm import LLMUnavailableError
-from app.domain.countries import UnsupportedCountryError
-from app.services.employee_service import (
+from app.modules.assistant.llm import LLMUnavailableError
+from app.modules.employees.service import (
     CurrencyChangeRequiresSalaryError,
     DuplicateEmailError,
     EmployeeNotFoundError,
 )
+from app.shared.countries import UnsupportedCountryError
 
 _STATUS_BY_ERROR: dict[type[Exception], int] = {
     EmployeeNotFoundError: 404,

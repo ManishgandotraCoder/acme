@@ -12,10 +12,10 @@ from typing import Literal
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
-from app.ai.llm import LLMClient
-from app.domain.countries import SUPPORTED_COUNTRIES
-from app.repositories.employee_repository import EmployeeRepository
-from app.services.insights_service import InsightsService
+from app.modules.assistant.llm import LLMClient
+from app.modules.employees.repository import EmployeeRepository
+from app.modules.insights.service import InsightsService
+from app.shared.countries import SUPPORTED_COUNTRIES
 
 Metric = Literal["org_summary", "country_stats", "job_title_stats", "department_stats"]
 

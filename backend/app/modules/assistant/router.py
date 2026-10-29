@@ -3,8 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from app.ai.ask_service import AskResult, AskService
-from app.api.deps import LLMDep, SessionDep
+from app.core.dependencies import LLMDep, SessionDep
+from app.modules.assistant.service import AskResult, AskService
 
 router = APIRouter(prefix="/api", tags=["ai"])
 
