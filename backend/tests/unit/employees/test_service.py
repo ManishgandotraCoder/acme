@@ -2,13 +2,13 @@ from datetime import date
 
 import pytest
 
-from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
-from app.modules.employees.service import (
+from app.modules.employees.errors import (
     CurrencyChangeRequiresSalaryError,
     DuplicateEmailError,
     EmployeeNotFoundError,
-    EmployeeService,
 )
+from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
+from app.modules.employees.service import EmployeeService
 
 
 def _payload(**overrides) -> EmployeeCreate:

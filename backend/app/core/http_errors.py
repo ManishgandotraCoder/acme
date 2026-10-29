@@ -1,37 +1,38 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.modules.assistant.llm import LLMUnavailableError
-from app.modules.employees.service import (
-    CurrencyChangeRequiresSalaryError,
-    DuplicateEmailError,
-    EmployeeNotFoundError,
+from app.core.errors import (
+    BusinessRuleError,
+    ConflictError,
+    DomainError,
+    NotFoundError,
+    ServiceUnavailableError,
 )
-from app.shared.countries import UnsupportedCountryError
 
-_STATUS_BY_ERROR: dict[type[Exception], int] = {
-    EmployeeNotFoundError: 404,
-    DuplicateEmailError: 409,
-    CurrencyChangeRequiresSalaryError: 422,
-    UnsupportedCountryError: 422,
-}
+logger = logging.getLogger(__name__)
+
+# Most specific first.
+_STATUS_BY_CATEGORY: tuple[tuple[type[DomainError], int], ...] = (
+    (NotFoundError, 404),
+    (ConflictError, 409),
+    (BusinessRuleError, 422),
+    (ServiceUnavailableError, 503),
+    (DomainError, 400),
+)
+
+
+def status_for(error: DomainError) -> int:
+    return next(status for category, status in _STATUS_BY_CATEGORY if isinstance(error, category))
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    for error, status in _STATUS_BY_ERROR.items():
-        app.add_exception_handler(error, _handler(status))
+    async def handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
+        assert isinstance(exc, DomainError)
+        status = status_for(exc)
+        if status >= 500:
+            logger.warning("%s %s -> %s: %s", request.method, request.url.path, status, exc)
+        return JSONResponse(status_code=status, content={"detail": exc.public_message})
 
-    async def llm_unavailable(_: Request, exc: Exception) -> JSONResponse:
-        return JSONResponse(
-            status_code=503,
-            content={"detail": "The AI assistant is unavailable right now. Is Ollama running?"},
-        )
-
-    app.add_exception_handler(LLMUnavailableError, llm_unavailable)
-
-
-def _handler(status: int):
-    async def handle(_: Request, exc: Exception) -> JSONResponse:
-        return JSONResponse(status_code=status, content={"detail": str(exc)})
-
-    return handle
+    app.add_exception_handler(DomainError, handle_domain_error)

@@ -7,10 +7,13 @@ Rates are deliberately static (see docs/REQUIREMENTS.md) to keep reports reprodu
 
 from dataclasses import dataclass
 
+from app.core.errors import BusinessRuleError
+
 FX_RATES_AS_OF = "2026-10-01"
 
 
-class UnsupportedCountryError(ValueError):
+# Also a ValueError so Pydantic validators turn it into a field-level 422.
+class UnsupportedCountryError(BusinessRuleError, ValueError):
     def __init__(self, country: str) -> None:
         super().__init__(f"Unsupported country: {country!r}")
         self.country = country

@@ -1,8 +1,12 @@
 from typing import Protocol
 
+from app.core.errors import ServiceUnavailableError
 
-class LLMUnavailableError(RuntimeError):
+
+class LLMUnavailableError(ServiceUnavailableError):
     """The language model could not be reached or returned an error."""
+
+    public_message = "The AI assistant is unavailable right now. Is Ollama running?"
 
 
 class LLMClient(Protocol):

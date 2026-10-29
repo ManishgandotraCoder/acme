@@ -1,27 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.modules.employees.errors import (
+    CurrencyChangeRequiresSalaryError,
+    DuplicateEmailError,
+    EmployeeNotFoundError,
+)
 from app.modules.employees.models import Employee, SalaryChange
 from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
 from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
 from app.shared.countries import currency_for
-
-
-class EmployeeNotFoundError(LookupError):
-    def __init__(self, employee_id: int) -> None:
-        super().__init__(f"Employee {employee_id} not found")
-
-
-class DuplicateEmailError(ValueError):
-    def __init__(self, email: str) -> None:
-        super().__init__(f"An employee with email {email!r} already exists")
-
-
-class CurrencyChangeRequiresSalaryError(ValueError):
-    def __init__(self, old: str, new: str) -> None:
-        super().__init__(
-            f"Moving from {old} to {new} changes currency; provide annual_salary in {new}"
-        )
 
 
 class EmployeeService:
