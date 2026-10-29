@@ -36,6 +36,11 @@ const METRIC_LABELS: Record<string, string> = {
   country_stats: 'Country stats',
   job_title_stats: 'Job title stats',
   department_stats: 'Department stats',
+  level_stats: 'Pay by level',
+  salary_bands: 'Salary bands',
+  outliers: 'Outliers',
+  above_department_average: 'Above department average',
+  salary_trends: 'Salary trends',
   unsupported: 'Not understood',
 }
 
@@ -202,9 +207,15 @@ export function ChatWidget() {
                       <AnswerText answer={answer} />
                       <Group gap={4} mt={8}>
                         <IntentBadge variant="light">{METRIC_LABELS[intent.metric] ?? intent.metric}</IntentBadge>
-                        {intent.country && <IntentBadge>Country: {intent.country}</IntentBadge>}
-                        {intent.job_title && <IntentBadge>Job title: {intent.job_title}</IntentBadge>}
-                        {intent.department && <IntentBadge>Department: {intent.department}</IntentBadge>}
+                        {intent.countries.map((c) => (
+                          <IntentBadge key={c}>Country: {c}</IntentBadge>
+                        ))}
+                        {intent.job_titles.map((t) => (
+                          <IntentBadge key={t}>Job title: {t}</IntentBadge>
+                        ))}
+                        {intent.departments.map((d) => (
+                          <IntentBadge key={d}>Department: {d}</IntentBadge>
+                        ))}
                       </Group>
                     </Bubble>
                   )

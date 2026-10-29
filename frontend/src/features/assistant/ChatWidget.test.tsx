@@ -4,12 +4,24 @@ import { assistantApi } from '@/features/assistant/api'
 import { ApiError } from '@/shared/api/client'
 import { renderWithProviders } from '@/test/render'
 import { ChatWidget } from './ChatWidget'
+import type { AskResult } from './types'
 
-const answer = {
+const answer: AskResult = {
   question: 'What do data analysts earn in Germany?',
+  kind: 'answer',
   answer: 'Data Analyst in Germany: 38 employees, average EUR 65,974.',
-  intent: { metric: 'job_title_stats', country: 'Germany', job_title: 'Data Analyst', department: null },
-  data: [],
+  intent: {
+    metric: 'job_title_stats',
+    countries: ['Germany'],
+    job_titles: ['Data Analyst'],
+    departments: [],
+    statistic: 'average',
+  },
+  table: null,
+  chart: null,
+  scope: 'Data Analyst · Germany · EUR',
+  suggestions: [],
+  provider: null,
 }
 
 async function openChat() {
