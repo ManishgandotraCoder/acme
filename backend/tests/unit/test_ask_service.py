@@ -67,7 +67,9 @@ def test_prompt_grounds_the_model_in_real_countries_and_job_titles(seeded):
 
 def test_answers_job_title_question_with_numbers_from_the_database(seeded):
     result = _ask(
-        seeded, {"metric": "job_title_stats", "country": "germany", "job_title": "data analysts"}
+        seeded,
+        {"metric": "job_title_stats", "country": "germany", "job_title": "data analysts"},
+        question="What do data analysts earn in Germany?",
     )
 
     assert result.intent == QueryIntent(
@@ -79,7 +81,7 @@ def test_answers_job_title_question_with_numbers_from_the_database(seeded):
 
 
 def test_answers_country_question(seeded):
-    result = _ask(seeded, {"metric": "country_stats", "country": "India"})
+    result = _ask(seeded, {"metric": "country_stats", "country": "India"}, "Pay in India?")
     assert result.answer.startswith("India: 1 employee, average INR 2,000,000")
 
 
@@ -94,16 +96,82 @@ def test_answers_org_summary(seeded):
 
 
 def test_answers_department_question(seeded):
-    result = _ask(seeded, {"metric": "department_stats", "department": "finance"})
+    result = _ask(seeded, {"metric": "department_stats", "department": "finance"}, "Finance pay?")
     assert result.answer.startswith("Finance: 2 employees, average USD 75,600")
 
 
-def test_unknown_values_fall_back_to_a_helpful_message(seeded):
+def test_unknown_job_title_is_dropped_and_answer_states_its_real_scope(seeded):
     result = _ask(
-        seeded, {"metric": "job_title_stats", "country": "Germany", "job_title": "Wizard"}
+        seeded,
+        {"metric": "job_title_stats", "country": "Germany", "job_title": "Wizard"},
+        question="What do wizards earn in Germany?",
     )
+    assert result.intent.job_title is None
+    assert result.answer.startswith("Average salary by job title in Germany")
+
+
+def test_model_can_decline_off_topic_questions(seeded):
+    result = _ask(seeded, {"metric": "unsupported"}, "What's the weather tomorrow?")
     assert result.intent.metric == "unsupported"
     assert "couldn't" in result.answer.lower()
+
+
+# --- Regression tests from running against the real llama3.2 model -------------------
+
+
+def test_entities_omitted_by_the_model_are_recovered_from_the_question(seeded):
+    result = _ask(
+        seeded,
+        {"metric": "job_title_stats", "job_title": "Data Analyst"},
+        question="What is the average salary of data analysts in Germany?",
+    )
+    assert (result.intent.country, result.intent.job_title) == ("Germany", "Data Analyst")
+
+
+def test_filters_invented_by_the_model_are_ignored(seeded):
+    result = _ask(
+        seeded,
+        {"metric": "department_stats", "department": "Finance"},
+        question="Which department has the highest average pay?",
+    )
+    assert result.intent.department is None
+    assert result.answer.startswith("Average salary by department (USD)")
+
+
+def test_unknown_values_invented_by_the_model_do_not_block_the_answer(seeded):
+    result = _ask(
+        seeded,
+        {
+            "metric": "job_title_stats",
+            "job_title": "Software Engineer",
+            "department": "IT/Software Development",
+        },
+        question="How much do we pay software engineers in India?",
+    )
+    assert result.intent == QueryIntent(
+        metric="job_title_stats", country="India", job_title="Software Engineer"
+    )
+
+
+@pytest.mark.parametrize(
+    ("question", "country"),
+    [("Average pay in the US?", "United States"), ("UK salaries", "United Kingdom")],
+)
+def test_common_country_abbreviations_are_understood(seeded, question, country):
+    result = _ask(seeded, {"metric": "country_stats"}, question)
+    assert result.intent.country == country
+
+
+def test_longest_job_title_mention_wins(session):
+    session.add_all(
+        [
+            build_employee(email="a@example.com", job_title="Software Engineer"),
+            build_employee(email="b@example.com", job_title="Senior Software Engineer"),
+        ]
+    )
+    session.commit()
+    result = _ask(session, {"metric": "job_title_stats"}, "Senior software engineer pay in the UK")
+    assert result.intent.job_title == "Senior Software Engineer"
 
 
 def test_malformed_llm_output_is_treated_as_unsupported(seeded):
