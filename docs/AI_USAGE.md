@@ -20,6 +20,12 @@ cases the rule was the same: AI proposes, tests and real runs decide.
    and asked real questions through the real model. Two of the most important fixes came
    from this step, not from unit tests.
 4. **Incremental commits** with messages explaining *why*.
+5. **Restructure under test:** when asked to structure the code like a senior architect, the
+   agent moved to a modular monolith in behaviour-preserving steps (pure move, then error
+   hierarchy, assistant split, migrations, observability), with the full suite green after
+   each step. It then added architecture tests so the structure can't erode.
+6. **Standing instructions** for the agent live in [CLAUDE.md](../CLAUDE.md), built from the
+   mistakes below.
 
 ### Where AI output was wrong — and how it was caught
 
@@ -31,6 +37,8 @@ cases the rule was the same: AI proposes, tests and real runs decide.
 | `useMutation({ mutationFn: api.ask })` — React Query v5 passes a second argument, leaking into the API call | Failing UI test (`toHaveBeenCalledWith`) | Wrapped: `(q) => api.ask(q)` |
 | **LLM hallucinations** in Ask AI (see below) | Running real questions against llama3.2 | Grounding design + regression tests |
 | **Salary sort compared raw local amounts** — JPY/INR employees ranked as "highest paid" | End-to-end smoke test reading the actual data | Sort by USD equivalent in SQL + test + clearer UI label |
+| Two hidden boundary violations after the restructure (`core` importing the assistant's `LLMClient` and the employee models) | The new architecture tests, on their first run | LLM DI moved into the assistant module; table registration moved to the composition root |
+| SQLite WAL/SHM sidecar files had been committed (`.gitignore` covered `*.db` only) | Reviewing `git status` during the restructure | Untracked and ignored |
 
 ## 2. AI as a product feature (Ask AI)
 

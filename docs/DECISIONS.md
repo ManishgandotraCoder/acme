@@ -2,9 +2,12 @@
 
 ## Key decisions
 
+The decisions that shape the codebase are written up as [ADRs](adr/README.md); this table
+is the quick overview.
+
 | # | Decision | Why | Trade-off accepted |
 |---|---|---|---|
-| 1 | **Store salaries in local currency**, derive currency from country | That's how contracts and payslips work; HR thinks in local amounts | Every cross-country view must convert — centralised in `domain/countries.py` |
+| 1 | **Store salaries in local currency**, derive currency from country | That's how contracts and payslips work; HR thinks in local amounts | Every cross-country view must convert — centralised in `shared/countries.py` |
 | 2 | **Static, dated FX table** (shown in the UI as "as of 2026-10-01") | Reports are reproducible and tests deterministic | Rates drift; one module to swap for a live rates provider |
 | 3 | **Convert after grouping by country** in insights | Never `SUM` mixed currencies | Department totals need a `(department, country)` group-by then a fold in Python — trivial at this scale |
 | 4 | **Salary sort ranks by USD equivalent** (`salary × rate` via SQL `CASE`) | "Highest paid" must compare like with like (bug found in smoke test: JPY salaries sorted first) | Sort can't use the plain salary index; fine at 10k rows |
@@ -14,10 +17,13 @@
 | 8 | **LLM classifies intent only; answers are templated from SQL results** | A hallucinated pay figure is worse than no answer; no text-to-SQL means no injection surface | Can only answer the 4 supported question shapes (+ variations); unsupported questions get a helpful hint |
 | 9 | **Verify the LLM's entities against the question text** | Found empirically: llama3.2 drops entities and invents filters (see AI_USAGE.md) | Synonyms the model maps ("devs" → Software Engineer) are dropped unless grounded |
 | 10 | **SQLite** | Zero-ops, file-based, ample for 10k rows; requirement allowed it | Single writer; Postgres is a `DATABASE_URL` change (repository layer has no SQLite-specific code besides pragmas) |
-| 11 | **Layered services + repository, plain exceptions** | Business rules testable without HTTP; one place maps errors | A little more structure than a "fat router" app |
+| 11 | **Modular monolith** (core / shared / modules), boundaries enforced by tests ([ADR 0001](adr/0001-modular-monolith.md)) | A feature lives in one folder; coupling is a reviewed decision; extractable later | More structure than a single-file app; microservices rejected as overkill |
 | 12 | **App factory with injected LLM** | Tests are hermetic and fast; Ollama outages degrade one feature, not the app | — |
 | 13 | **Single deployable container** (API serves built UI) | Simplest possible deployment & no CORS in prod | UI and API scale together (fine for an internal HR tool) |
 | 14 | **Mantine** component library | Accessible, complete (tables, forms, charts, notifications), little CSS to write | Larger bundle — mitigated by route-level code splitting |
+| 16 | **Domain error categories** (NotFound / Conflict / BusinessRule / ServiceUnavailable) mapped to HTTP once | Services stay HTTP-free; new errors need no infrastructure change | — |
+| 17 | **Alembic migrations + drift test** ([ADR 0004](adr/0004-sqlite-with-alembic.md)) | Schema can evolve with data in place; models can't silently diverge | One extra step on deploy (automated in the container) |
+| 18 | **Request IDs + access logs, liveness/readiness endpoints** | Minimum needed to debug production and run behind a load balancer | — |
 | 15 | **Offset pagination** (page/page_size ≤ 100) | Users jump to page N; data set is small | Deep offsets would be slow at millions of rows (keyset pagination then) |
 
 ## Deliberately not built
