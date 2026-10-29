@@ -9,7 +9,7 @@ def _client(tmp_path) -> TestClient:
     (tmp_path / "index.html").write_text("<html>spa</html>")
     (tmp_path / "assets").mkdir()
     (tmp_path / "assets" / "app.js").write_text("console.log(1)")
-    settings = Settings(database_url="sqlite://", static_dir=str(tmp_path))
+    settings = Settings(database_url="sqlite://", auto_create_schema=True, static_dir=str(tmp_path))
     return TestClient(create_app(settings, llm=StubLLM()))
 
 

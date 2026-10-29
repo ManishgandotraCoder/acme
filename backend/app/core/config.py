@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SALARY_", env_file=".env", extra="ignore")
 
     database_url: str = "sqlite:///./salary.db"
+    # Production schema is managed by Alembic (`alembic upgrade head`). Tests opt in to a
+    # fast create_all() instead.
+    auto_create_schema: bool = False
     cors_origins: list[str] = ["http://localhost:5173"]
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"

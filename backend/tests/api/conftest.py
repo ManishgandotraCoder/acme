@@ -24,7 +24,7 @@ def llm() -> StubLLM:
 
 @pytest.fixture
 def client(llm) -> Iterator[TestClient]:
-    app = create_app(Settings(database_url="sqlite://"), llm=llm)
+    app = create_app(Settings(database_url="sqlite://", auto_create_schema=True), llm=llm)
     with TestClient(app) as c:
         yield c
 

@@ -24,7 +24,8 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        create_schema(engine)
+        if settings.auto_create_schema:
+            create_schema(engine)
         http = None
         if llm is None:
             http = httpx.Client(

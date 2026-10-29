@@ -15,6 +15,8 @@ WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/app ./app
+COPY backend/alembic.ini ./
+COPY backend/migrations ./migrations
 COPY --from=web /web/dist ./static
 
 ENV SALARY_DATABASE_URL=sqlite:////data/salary.db \
@@ -23,5 +25,5 @@ ENV SALARY_DATABASE_URL=sqlite:////data/salary.db \
 VOLUME /data
 EXPOSE 8000
 
-# Seed 10k employees on first boot only, then serve.
-CMD ["sh", "-c", "python -m app.seed.run --if-empty && uvicorn app.main:create_app --factory --host 0.0.0.0 --port ${PORT:-8000}"]
+# Migrate, seed 10k employees on first boot only, then serve.
+CMD ["sh", "-c", "alembic upgrade head && python -m app.seed.run --if-empty && uvicorn app.main:create_app --factory --host 0.0.0.0 --port ${PORT:-8000}"]

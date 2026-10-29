@@ -1,4 +1,7 @@
-"""Seed the database: ``python -m app.seed.run --count 10000 --reset``."""
+"""Seed the database: ``python -m app.seed.run --count 10000 --reset``.
+
+Expects a migrated schema (``alembic upgrade head``).
+"""
 
 import argparse
 import random
@@ -8,7 +11,7 @@ from sqlalchemy import delete, exists, insert, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.database import create_schema, make_engine, make_session_factory
+from app.core.database import make_engine, make_session_factory
 from app.modules.employees.models import Employee, SalaryChange
 from app.seed.generator import generate_employees, load_names
 
@@ -45,7 +48,6 @@ def main() -> None:
     args = parser.parse_args()
 
     engine = make_engine(get_settings().database_url)
-    create_schema(engine)
     started = time.perf_counter()
     with make_session_factory(engine)() as session:
         inserted = seed_database(
