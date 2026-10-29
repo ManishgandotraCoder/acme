@@ -12,16 +12,19 @@ def test_add_and_get_employee(session):
     created = repo.add(build_employee())
     session.commit()
 
-    assert repo.get(created.id).email == "ada@acme.test"
+    assert repo.get(created.id).email == "ada@example.com"
 
 
 def test_get_by_email_is_case_insensitive(session):
-    _seed(session, build_employee(email="ada@acme.test"))
-    assert EmployeeRepository(session).get_by_email("ADA@acme.test") is not None
+    _seed(session, build_employee(email="ada@example.com"))
+    assert EmployeeRepository(session).get_by_email("ADA@example.com") is not None
 
 
 def test_list_paginates_and_reports_total(session):
-    _seed(session, *[build_employee(full_name=f"E{i:02}", email=f"e{i}@acme.test") for i in range(25)])
+    _seed(
+        session,
+        *[build_employee(full_name=f"E{i:02}", email=f"e{i}@example.com") for i in range(25)],
+    )
 
     items, total = EmployeeRepository(session).search(EmployeeFilter(), page=2, page_size=10)
 
@@ -32,8 +35,8 @@ def test_list_paginates_and_reports_total(session):
 def test_list_searches_name_and_email(session):
     _seed(
         session,
-        build_employee(full_name="Grace Hopper", email="grace@acme.test"),
-        build_employee(full_name="Alan Turing", email="alan@acme.test"),
+        build_employee(full_name="Grace Hopper", email="grace@example.com"),
+        build_employee(full_name="Alan Turing", email="alan@example.com"),
     )
     repo = EmployeeRepository(session)
 
@@ -44,9 +47,9 @@ def test_list_searches_name_and_email(session):
 def test_list_filters_by_country_department_and_job_title(session):
     _seed(
         session,
-        build_employee(email="a@x.test", country="India", currency="INR", department="Sales"),
-        build_employee(email="b@x.test", country="India", currency="INR", job_title="Analyst"),
-        build_employee(email="c@x.test", country="Germany", currency="EUR"),
+        build_employee(email="a@example.com", country="India", currency="INR", department="Sales"),
+        build_employee(email="b@example.com", country="India", currency="INR", job_title="Analyst"),
+        build_employee(email="c@example.com", country="Germany", currency="EUR"),
     )
     repo = EmployeeRepository(session)
 
@@ -58,9 +61,9 @@ def test_list_filters_by_country_department_and_job_title(session):
 def test_list_sorts_by_salary_descending(session):
     _seed(
         session,
-        build_employee(email="a@x.test", annual_salary=50_000),
-        build_employee(email="b@x.test", annual_salary=90_000),
-        build_employee(email="c@x.test", annual_salary=70_000),
+        build_employee(email="a@example.com", annual_salary=50_000),
+        build_employee(email="b@example.com", annual_salary=90_000),
+        build_employee(email="c@example.com", annual_salary=70_000),
     )
 
     items, _ = EmployeeRepository(session).search(
@@ -73,9 +76,9 @@ def test_list_sorts_by_salary_descending(session):
 def test_distinct_values_feed_filter_dropdowns(session):
     _seed(
         session,
-        build_employee(email="a@x.test", department="Sales", job_title="Account Executive"),
-        build_employee(email="b@x.test", department="Engineering"),
-        build_employee(email="c@x.test", department="Sales", job_title="Account Executive"),
+        build_employee(email="a@example.com", department="Sales", job_title="Account Executive"),
+        build_employee(email="b@example.com", department="Engineering"),
+        build_employee(email="c@example.com", department="Sales", job_title="Account Executive"),
     )
     repo = EmployeeRepository(session)
 

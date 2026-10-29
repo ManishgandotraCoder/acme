@@ -47,7 +47,8 @@ class SalaryChange(Base):
     )
     previous_salary: Mapped[int] = mapped_column(Integer)
     new_salary: Mapped[int] = mapped_column(Integer)
-    currency: Mapped[str] = mapped_column(String(3))
+    previous_currency: Mapped[str] = mapped_column(String(3))
+    new_currency: Mapped[str] = mapped_column(String(3))
     reason: Mapped[str | None] = mapped_column(String(255))
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

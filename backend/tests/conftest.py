@@ -22,7 +22,7 @@ def build_employee(**overrides) -> Employee:
     """Test data builder with sensible defaults; override only what the test cares about."""
     defaults = dict(
         full_name="Ada Lovelace",
-        email="ada@acme.test",
+        email="ada@example.com",
         job_title="Software Engineer",
         department="Engineering",
         country="United Kingdom",
