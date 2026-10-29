@@ -1,0 +1,18 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="SALARY_", env_file=".env", extra="ignore")
+
+    database_url: str = "sqlite:///./salary.db"
+    cors_origins: list[str] = ["http://localhost:5173"]
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.2"
+    ollama_timeout_seconds: float = 30.0
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
