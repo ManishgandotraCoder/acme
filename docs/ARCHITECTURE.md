@@ -158,19 +158,24 @@ directly.
 ```
 frontend/src/
 ├── main.tsx                 bootstraps <AppProviders><App/></AppProviders>
-├── app/                     App shell (layout, nav, lazy routes), providers
+├── app/                     shell (header, lazy routes), providers, theme
 ├── shared/
 │   ├── api/                 typed fetch client (+ApiError), Page<T>
 │   └── lib/format.ts        money/number/date formatting
 ├── features/
 │   ├── employees/           api.ts · types.ts · hooks.ts · EmployeesPage · components/
 │   ├── insights/            api.ts · types.ts · InsightsPage
-│   └── assistant/           api.ts · types.ts · AskPage
+│   └── assistant/           api.ts · types.ts · ChatWidget · answerFormat
 └── test/                    render-with-providers, fixtures, jsdom setup
 ```
 
 - Each feature mirrors a backend module: its `types.ts` mirrors the module's `schemas.py`.
 - Server state lives in TanStack Query (cache, `keepPreviousData` paging, invalidation
   after writes); UI state stays local. No global store needed.
+- Routes: `/` employees (home), `/insights` pay insights. No sidebar: the home page links to
+  insights and back. The pay assistant is a floating chat mounted once in the shell, so its
+  conversation survives navigation; the old `/ask` URL opens it.
 - Routes are lazy-loaded, so the charting library downloads only for *Pay insights*.
+- Theme (`app/theme.ts`): green brand palette with green-tinted neutrals; WCAG contrast of
+  buttons and dimmed text is asserted in tests.
 - `@/` import alias; features don't import each other.

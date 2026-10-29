@@ -1,7 +1,9 @@
 import { BarChart } from '@mantine/charts'
-import { Alert, Group, Paper, Select, SimpleGrid, Skeleton, Stack, Table, Text, Title } from '@mantine/core'
+import { Alert, Button, Group, Paper, Select, SimpleGrid, Skeleton, Stack, Table, Text, Title } from '@mantine/core'
+import { IconArrowLeft } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { formatMoney, formatNumber } from '@/shared/lib/format'
 import { LoadingStatus, SkeletonRows } from '@/shared/ui/loading'
 import { insightsApi } from '@/features/insights/api'
@@ -14,6 +16,9 @@ export function InsightsPage() {
   return (
     <Stack gap="lg">
       <div>
+        <Button component={Link} to="/" variant="subtle" size="compact-sm" leftSection={<IconArrowLeft size={14} />} ml={-8} mb={4}>
+          Back to employees
+        </Button>
         <Title order={2}>Pay insights</Title>
         <Text c="dimmed" size="sm">
           Salaries are stored in local currency. Cross-country figures are converted to USD at static
@@ -48,7 +53,7 @@ export function InsightsPage() {
             dataKey="country"
             orientation="vertical"
             yAxisProps={{ width: 110 }}
-            series={[{ name: 'average_salary_usd', label: 'Average salary (USD)', color: 'mauve.6' }]}
+            series={[{ name: 'average_salary_usd', label: 'Average salary (USD)', color: 'brand.6' }]}
             valueFormatter={(v) => formatMoney(v, 'USD')}
             gridAxis="x"
             barProps={{ radius: [0, 4, 4, 0] }}

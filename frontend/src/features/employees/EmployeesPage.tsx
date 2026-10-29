@@ -7,6 +7,7 @@ import {
   Pagination,
   Paper,
   Select,
+  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -16,8 +17,9 @@ import {
 } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconHistory, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import { IconChartBar, IconHistory, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { formatDate, formatMoney, formatNumber } from '@/shared/lib/format'
 import { LoadingStatus, RefreshBar, SkeletonRows } from '@/shared/ui/loading'
 import { EmployeeForm } from './components/EmployeeForm'
@@ -112,12 +114,17 @@ export function EmployeesPage() {
             {employees.isPending ? 'Loading…' : `${formatNumber(total)} employees`}
           </Text>
         </div>
-        <Button leftSection={<IconPlus size={16} />} onClick={() => setEditing('new')} disabled={!meta.data}>
-          Add employee
-        </Button>
+        <Group gap="sm">
+          <Button component={Link} to="/insights" variant="light" leftSection={<IconChartBar size={16} />}>
+            Pay insights
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setEditing('new')} disabled={!meta.data}>
+            Add employee
+          </Button>
+        </Group>
       </Group>
 
-      <Group grow align="flex-end" wrap="wrap">
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 5 }} spacing="sm">
         <TextInput
           placeholder="Search name or email"
           leftSection={<IconSearch size={16} />}
@@ -161,7 +168,7 @@ export function EmployeesPage() {
           allowDeselect={false}
           onChange={(v) => v && setSort(v)}
         />
-      </Group>
+      </SimpleGrid>
 
       {employees.error && <Alert color="red">{employees.error.message}</Alert>}
 

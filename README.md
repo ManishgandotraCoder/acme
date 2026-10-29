@@ -19,14 +19,16 @@ Vitest + Testing Library · Docker · GitHub Actions
 
 ## What the HR manager can do
 
-- **Employee directory:** search 10k employees by name/email; filter by country, department
-  and job title; sort (salary sorts compare in USD terms); paginate.
+- **Employee directory (home page):** search 10k employees by name/email; filter by country,
+  department and job title; sort (salary sorts compare in USD terms); paginate.
 - **Add / edit / remove employees,** with the same validation in the browser and on the server.
 - **Salary history:** every salary or currency change is recorded with a reason.
-- **Pay insights:** headline org numbers; per-country min/median/average/max (local currency
-  and USD); pay by job title within a country; pay by department.
-- **Ask AI:** "What do data analysts earn in Germany?" A local Ollama model interprets the
-  question; **every number comes from the database**, never from the model.
+- **Pay insights** (button on the home page → `/insights`): headline org numbers; per-country
+  min/median/average/max (local currency and USD); pay by job title within a country; pay by
+  department.
+- **Pay assistant chat** (bottom-right on every page): "What do data analysts earn in Germany?"
+  A local Ollama model interprets the question; **every number comes from the database**, never
+  from the model. The conversation persists while you move between pages.
 
 ## Quick start
 
@@ -36,9 +38,9 @@ make db-reset     # migrate + seed 10,000 employees
 make dev-api      # http://localhost:8000/docs
 make dev-web      # http://localhost:5173
 ```
-Prerequisites: Python 3.12 + [uv](https://docs.astral.sh/uv/), Node 22. For *Ask AI*:
+Prerequisites: Python 3.12 + [uv](https://docs.astral.sh/uv/), Node 22. For the pay assistant:
 [Ollama](https://ollama.com) with `ollama pull llama3.2`. Without it everything else works,
-and *Ask AI* explains that the assistant is unavailable.
+and the chat explains that the assistant is unavailable.
 
 **Docker (everything, including Ollama):** `make docker-up` → http://localhost:8000.
 The container runs migrations, seeds on first boot only, then serves the UI and the API.

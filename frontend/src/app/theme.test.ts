@@ -13,29 +13,31 @@ function contrast(a: string, b: string): number {
 }
 
 describe('theme', () => {
-  const mauve = theme.colors!.mauve!
+  const brand = theme.colors!.brand!
   const shade = theme.primaryShade as { light: number; dark: number }
 
-  it('uses the magenta-grey "mauve" palette as primary', () => {
-    expect(theme.primaryColor).toBe('mauve')
-    expect(mauve).toHaveLength(10)
+  it('uses the green "brand" palette as primary', () => {
+    expect(theme.primaryColor).toBe('brand')
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand[7].slice(i, i + 2), 16))
+    expect(g).toBeGreaterThan(r)
+    expect(g).toBeGreaterThan(b)
   })
 
   it('keeps button text readable (WCAG AA 4.5:1) in light and dark mode', () => {
-    expect(contrast('#ffffff', mauve[shade.light])).toBeGreaterThanOrEqual(4.5)
-    expect(contrast('#ffffff', mauve[shade.dark])).toBeGreaterThanOrEqual(4.5)
+    expect(contrast('#ffffff', brand[shade.light])).toBeGreaterThanOrEqual(4.5)
+    expect(contrast('#ffffff', brand[shade.dark])).toBeGreaterThanOrEqual(4.5)
   })
 
-  it.each(['mauve', 'gray', 'dark'])('%s scale goes from light to dark across 10 shades', (name) => {
+  it.each(['brand', 'gray', 'dark'])('%s scale goes from light to dark across 10 shades', (name) => {
     const l = theme.colors![name]!.map(luminance)
     expect(l).toHaveLength(10)
     expect(l).toEqual([...l].sort((a, b) => b - a))
   })
 
-  it('tints neutrals toward magenta so greys match the brand', () => {
+  it('tints neutrals toward green so greys match the brand', () => {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(theme.colors!.gray![3].slice(i, i + 2), 16))
-    expect(r).toBeGreaterThan(g) // red + blue above green = magenta cast
-    expect(b).toBeGreaterThan(g)
+    expect(g).toBeGreaterThan(r)
+    expect(g).toBeGreaterThan(b)
   })
 
   it('keeps dimmed text readable (AA) on light and dark surfaces', () => {

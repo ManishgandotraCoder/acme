@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { theme } from '@/app/theme'
 
 /** Render with the same providers the app uses; retries off so failures surface immediately. */
-export function renderWithProviders(ui: ReactElement) {
+export function renderWithProviders(ui: ReactElement, { route = '/' }: { route?: string } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -18,7 +18,7 @@ export function renderWithProviders(ui: ReactElement) {
       <QueryClientProvider client={queryClient}>
         <MantineProvider theme={theme} env="test">
           <Notifications />
-          <MemoryRouter>{ui}</MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
         </MantineProvider>
       </QueryClientProvider>,
     ),
