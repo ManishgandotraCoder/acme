@@ -49,7 +49,7 @@ db-down: ## Stop local Postgres (data is kept in a volume)
 	docker compose stop postgres
 
 db-shell: ## Open psql on the local database
-	docker compose exec postgres psql -U salary -d salary
+	docker compose exec postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 db-migrate: db-up ## Apply database migrations
 	$(BACKEND) uv run alembic upgrade head

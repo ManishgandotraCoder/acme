@@ -28,9 +28,16 @@ def test_health_check_points_at_a_live_endpoint(web, client):
     assert client.get(web["healthCheckPath"]).status_code == 200
 
 
-def test_database_url_is_a_dashboard_secret_never_committed(web):
-    env = {var["key"]: var for var in web["envVars"]}
-    database_url = env["SALARY_DATABASE_URL"]
+@pytest.fixture(scope="module")
+def env(web) -> dict:
+    return {var["key"]: var for var in web["envVars"]}
 
-    assert database_url["sync"] is False
-    assert "value" not in database_url
+
+@pytest.mark.parametrize("secret", ["SALARY_DATABASE_URL", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"])
+def test_secrets_are_entered_in_the_dashboard_never_committed(env, secret):
+    assert env[secret]["sync"] is False
+    assert "value" not in env[secret]
+
+
+def test_settings_that_are_not_secret_are_committed_with_the_blueprint(env):
+    assert env["SALARY_LLM_PROVIDER"]["value"] == "anthropic"

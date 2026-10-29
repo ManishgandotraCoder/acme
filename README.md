@@ -61,12 +61,25 @@ The container runs migrations, seeds on first boot only, then serves the UI and 
 Render Dashboard → *New* → *Blueprint* → pick this repo and paste the Neon connection string as
 `SALARY_DATABASE_URL`. [render.yaml](render.yaml) builds a web service from the Dockerfile.
 The first boot migrates and seeds 10,000 employees. Ollama isn't hosted there: set
-`ANTHROPIC_API_KEY` or `OPENAI_API_KEY` (and `SALARY_LLM_PROVIDER`) in the dashboard to enable
-Ask Salary Data; without a key it reports itself unavailable while everything else works. A demo script is in
-[docs/DEMO.md](docs/DEMO.md).
+`ANTHROPIC_API_KEY` (or `OPENAI_API_KEY`, and change `SALARY_LLM_PROVIDER` in render.yaml to
+`openai`) in the dashboard to enable Ask Salary Data; without a key it reports itself
+unavailable while everything else works. A demo script is in [docs/DEMO.md](docs/DEMO.md).
 
-Run `make help` for all tasks. Configuration: `SALARY_*` env vars, see
-[backend/.env.example](backend/.env.example).
+Run `make help` for all tasks.
+
+**Configuration** lives in git-ignored `.env` files; copy each `.env.example` and adjust. Every
+value has a working default, so all three are optional.
+
+| File | Read by | Holds |
+|---|---|---|
+| [backend/.env.example](backend/.env.example) | API, Alembic, seed, app container | Database URL, model provider and keys, CORS, acting user |
+| [.env.example](.env.example) | docker-compose | Local Postgres user/password/port, app port, Ollama model |
+| [frontend/.env.example](frontend/.env.example) | Vite dev server | API proxy target |
+
+Each setting is marked **[SECRET]** (database URL with a password, API keys) or **[config]**.
+Secrets never go in code or in committed files: locally they stay in `.env`; on Render they are
+entered in the dashboard (`sync: false` in render.yaml). Never put a secret in a `VITE_*`
+variable: those are compiled into the JavaScript the browser downloads.
 
 ## Quality
 

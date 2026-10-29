@@ -1,23 +1,25 @@
 # Local stack. Database only (for `make dev-api`): `make db-up`.
 # Everything: `docker compose up --build`, then http://localhost:8000
+# Settings come from .env next to this file (see .env.example); each has a default here.
 services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: salary
-      POSTGRES_PASSWORD: salary
-      POSTGRES_DB: salary
-    ports: ["5433:5432"]  # 5433 avoids clashing with a locally installed Postgres
+      POSTGRES_USER: ${POSTGRES_USER:-salary}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-salary}
+      POSTGRES_DB: ${POSTGRES_DB:-salary}
+    ports: ["${POSTGRES_PORT:-5433}:5432"]  # 5433 avoids clashing with a locally installed Postgres
     volumes: ["postgres-data:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U salary -d salary"]
+      # $$ defers to the container's own environment.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 2s
       timeout: 3s
       retries: 30
 
   app:
     build: .
-    ports: ["8000:8000"]
+    ports: ["${APP_PORT:-8000}:8000"]
     # Same settings as local development (API keys, model, actor...). Optional: copy
     # backend/.env.example to backend/.env.
     env_file:
@@ -26,8 +28,9 @@ services:
     # Inside the container the database and Ollama are other services, not localhost, so
     # these override whatever backend/.env says.
     environment:
-      SALARY_DATABASE_URL: postgresql+psycopg://salary:salary@postgres:5432/salary
+      SALARY_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-salary}:${POSTGRES_PASSWORD:-salary}@postgres:5432/${POSTGRES_DB:-salary}
       SALARY_OLLAMA_URL: http://ollama:11434
+      SALARY_OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
     depends_on:
       postgres: { condition: service_healthy }
       ollama: { condition: service_started }
@@ -37,7 +40,7 @@ services:
     image: ollama/ollama:0.12.3
     volumes: ["ollama-models:/root/.ollama"]
     # Pull the model once on start-up (the app works without it; Ask AI returns 503 until ready).
-    entrypoint: ["sh", "-c", "ollama serve & sleep 3 && ollama pull llama3.2 && wait"]
+    entrypoint: ["sh", "-c", "ollama serve & sleep 3 && ollama pull ${OLLAMA_MODEL:-llama3.2} && wait"]
     profiles: [app]
 
 volumes:

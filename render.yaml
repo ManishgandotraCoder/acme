@@ -1,9 +1,11 @@
 # Render blueprint: https://render.com/docs/blueprint-spec
-# Dashboard → New → Blueprint → pick this repo, and paste the Neon PostgreSQL URL as
-# SALARY_DATABASE_URL. Render builds the Dockerfile; the container migrates, seeds 10k
-# employees on first boot and serves UI + API on one URL. Ollama isn't hosted here: set ANTHROPIC_API_KEY or
-# OPENAI_API_KEY in the dashboard (and SALARY_LLM_PROVIDER to anthropic/openai) to enable the
-# assistant; without them it answers "unavailable" (503) while the rest of the app works.
+# Dashboard → New → Blueprint → pick this repo. Render builds the Dockerfile; the container
+# migrates, seeds 10k employees on first boot and serves UI + API on one URL.
+#
+# Two kinds of settings (all listed in backend/.env.example):
+# - Secrets (sync: false): Render asks for them on the first deploy and keeps them in the
+#   dashboard. They are never committed.
+# - Plain settings (value: ...): committed here, so every deploy is reproducible.
 services:
   - type: web
     name: acme-salary
@@ -15,13 +17,18 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      # Secrets: entered in the Render dashboard, never committed (sync: false).
-      # PostgreSQL is hosted on Neon: its free tier doesn't expire, unlike Render's.
+      # --- Secrets ---------------------------------------------------------------------
+      # Neon PostgreSQL connection string (Neon's free tier doesn't expire, unlike Render's).
       - key: SALARY_DATABASE_URL
         sync: false
+      # Ollama isn't hosted here, so the assistant needs a cloud model: set at least one key.
+      # Without one, it answers "unavailable" (503) while the rest of the app works.
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # --- Plain settings --------------------------------------------------------------
       - key: SALARY_LLM_PROVIDER
-        sync: false
+        value: anthropic  # or openai, to match the key above
+      - key: SALARY_LOG_LEVEL
+        value: INFO
