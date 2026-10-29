@@ -3,8 +3,10 @@
 The planner's *choice* depends on table size: on 300 test rows a table scan or a small sort is
 legitimately cheapest, while at production scale the index wins. So these tests ask a
 size-independent question instead: "does an index path exist that avoids a table scan and a
-sort?" With ``enable_seqscan``/``enable_sort`` off, Postgres still uses a disabled operation
-only when it has no alternative, so any Seq Scan or Sort left in the plan is a missing index.
+sort?" With ``enable_seqscan``/``enable_sort``/``enable_incremental_sort`` off, Postgres still
+uses a disabled operation only when it has no alternative, so any Seq Scan or Sort left in the
+plan is a missing index. (Incremental sorts have their own switch; without it the planner may
+pick a partly-matching index plus an incremental sort, depending on table size estimates.)
 """
 
 from collections.abc import Callable, Iterator
@@ -46,7 +48,9 @@ def query_plans(
 
     connection = session.connection()
     connection.execute(text("SET LOCAL enable_seqscan = off"))
-    connection.execute(text(f"SET LOCAL enable_sort = {'on' if allow_sort else 'off'}"))
+    sort = "on" if allow_sort else "off"
+    connection.execute(text(f"SET LOCAL enable_sort = {sort}"))
+    connection.execute(text(f"SET LOCAL enable_incremental_sort = {sort}"))
     nodes: list[PlanNode] = []
     for sql, params in statements:
         [[plan]] = connection.exec_driver_sql(f"EXPLAIN (FORMAT JSON) {sql}", params).all()

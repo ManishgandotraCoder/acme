@@ -8,6 +8,7 @@ from datetime import date
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.core.actor import SYSTEM
 from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
@@ -111,3 +112,17 @@ def test_search_uses_the_trigram_indexes_instead_of_scanning(seeded):
     assert {"ix_employees_full_name_trgm", "ix_employees_email_trgm"} <= used, used
     # Matches come from the indexes; only the small matched set is sorted.
     assert table_scans(plans) == [], [str(n) for n in plans]
+
+
+def test_plan_check_is_not_fooled_by_table_bloat_from_other_tests(session, engine):
+    # Regression: a rolled-back bulk insert elsewhere (the benchmark) leaves dead rows; the
+    # planner then sized the table differently and chose another index plus an *incremental*
+    # sort, which enable_sort does not disable. The check must still find the sort-free path.
+    with engine.connect() as other, other.begin() as transaction:
+        seed_database(Session(bind=other), count=2_000, seed=3)
+        transaction.rollback()
+    seed_database(session, count=300, seed=1)
+
+    plans = query_plans(session, lambda: InsightsService(session).level_stats())
+
+    assert sorts(plans) == [], [str(n) for n in plans]
