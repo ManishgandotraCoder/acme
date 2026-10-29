@@ -7,10 +7,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.core.config import Settings, get_settings
 from app.core.database import create_schema, make_engine, make_session_factory
+from app.core.dependencies import SessionDep
 from app.core.http_errors import register_error_handlers
+from app.core.logging import REQUEST_ID_HEADER, configure_logging, install_request_context
 from app.modules.assistant.llm import LLMClient
 from app.modules.assistant.ollama import OllamaClient
 from app.modules.assistant.router import router as assistant_router
@@ -20,6 +23,7 @@ from app.modules.insights.router import router as insights_router
 
 def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -> FastAPI:
     settings = settings or get_settings()
+    configure_logging(settings.log_level)
     engine = make_engine(settings.database_url)
 
     @asynccontextmanager
@@ -46,12 +50,21 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
         allow_origins=settings.cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=[REQUEST_ID_HEADER],
     )
+    install_request_context(app)
     register_error_handlers(app)
 
     @app.get("/api/health", tags=["ops"])
     def health() -> dict[str, str]:
+        """Liveness: the process is up."""
         return {"status": "ok"}
+
+    @app.get("/api/ready", tags=["ops"])
+    def ready(session: SessionDep) -> dict[str, str]:
+        """Readiness: dependencies needed to serve traffic are reachable."""
+        session.execute(text("SELECT 1"))
+        return {"status": "ready", "database": "ok"}
 
     for router in (employees_router, insights_router, assistant_router):
         app.include_router(router)
