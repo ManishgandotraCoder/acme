@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+coverage/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+.env
