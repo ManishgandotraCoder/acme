@@ -1,9 +1,12 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.ai.llm import LLMClient
 from app.ai.ollama_client import OllamaClient
@@ -49,4 +52,20 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
 
     for module in (employees, insights, ask):
         app.include_router(module.router)
+    if settings.static_dir:
+        _serve_frontend(app, Path(settings.static_dir))
     return app
+
+
+def _serve_frontend(app: FastAPI, dist: Path) -> None:
+    """Serve the built SPA; unknown non-API paths return index.html for client routing."""
+    app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def spa(path: str) -> FileResponse:
+        if path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        candidate = (dist / path).resolve()
+        if path and candidate.is_file() and candidate.is_relative_to(dist.resolve()):
+            return FileResponse(candidate)
+        return FileResponse(dist / "index.html")

@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"
     ollama_timeout_seconds: float = 30.0
+    # Directory of the built frontend (frontend/dist). When set, the API also serves the UI.
+    static_dir: str | None = None
 
 
 @lru_cache

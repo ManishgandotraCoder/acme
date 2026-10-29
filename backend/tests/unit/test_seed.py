@@ -45,3 +45,9 @@ def test_seed_database_inserts_and_reset_replaces(session):
     assert seed_database(session, count=50, seed=1) == 50
     assert seed_database(session, count=30, seed=1, reset=True) == 30
     assert session.scalar(select(func.count()).select_from(Employee)) == 30
+
+
+def test_seed_if_empty_does_not_duplicate_existing_data(session):
+    seed_database(session, count=20, seed=1)
+    assert seed_database(session, count=50, seed=1, only_if_empty=True) == 0
+    assert session.scalar(select(func.count()).select_from(Employee)) == 20
