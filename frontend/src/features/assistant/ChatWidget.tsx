@@ -26,13 +26,15 @@ import {
   IconSparkles,
 } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { assistantApi } from '@/features/assistant/api'
 import type { AskResult } from '@/features/assistant/types'
 import { toAnswerParts } from './answerFormat'
-import { AnswerEvidence } from './AnswerEvidence'
 import { WorkingIndicator } from '@/shared/ui/loading'
+
+// Charts are heavy and the chat is on every page: load them with the first answer that has one.
+const AnswerEvidence = lazy(() => import('./AnswerEvidence').then((m) => ({ default: m.AnswerEvidence })))
 
 const EXAMPLES = [
   'What are the average and median salaries across the organization?',
@@ -219,7 +221,9 @@ export function ChatWidget() {
                       ) : (
                         <AnswerText answer={answer} hasTable={table !== null} />
                       )}
-                      <AnswerEvidence result={m.result} />
+                      <Suspense fallback={null}>
+                        <AnswerEvidence result={m.result} />
+                      </Suspense>
                       {suggestions.length > 0 && (
                         <Stack gap={4} mt={8} align="flex-start">
                           {suggestions.map((suggestion) => (

@@ -144,7 +144,7 @@ describe('ChatWidget', () => {
     await user.type(within(chat).getByLabelText(/message/i), 'Highest median?{Enter}')
 
     expect(await within(chat).findByText('Engineering has the highest median salary (USD 100,299).')).toBeInTheDocument()
-    expect(within(chat).getByLabelText('Chart: Median salary (USD)')).toBeInTheDocument()
+    expect(await within(chat).findByLabelText('Chart: Median salary (USD)')).toBeInTheDocument()
     const engineering = within(chat).getByRole('row', { name: /engineering/i })
     expect(within(engineering).getByText('USD 100,299')).toBeInTheDocument()
     expect(within(engineering).getByText('EUR 95,000')).toBeInTheDocument()
