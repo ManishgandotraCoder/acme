@@ -10,7 +10,7 @@ is the quick overview.
 | 1 | **Store salaries in local currency**, derive currency from country | That's how contracts and payslips work; HR thinks in local amounts | Every cross-country view must convert — centralised in `shared/countries.py` |
 | 2 | **Static, dated FX table** (shown in the UI as "as of 2026-10-01") | Reports are reproducible and tests deterministic | Rates drift; one module to swap for a live rates provider |
 | 3 | **Convert after grouping by country** in insights | Never `SUM` mixed currencies | Department totals need a `(department, country)` group-by then a fold in Python — trivial at this scale |
-| 4 | **Salary sort ranks by USD equivalent** (`salary × rate` via SQL `CASE`) | "Highest paid" must compare like with like (bug found in smoke test: JPY salaries sorted first) | Sort can't use the plain salary index; fine at 10k rows |
+| 4 | **Salary sort ranks by USD equivalent** (stored, indexed `annual_salary_usd`; [ADR 0006](adr/0006-indexing.md)) | "Highest paid" must compare like with like (bug found in smoke test: JPY salaries sorted first) | Derived column must be recomputed if FX rates change |
 | 5 | **Changing to a different-currency country requires a new salary** | Otherwise 2,400,000 INR silently becomes 2,400,000 EUR | One extra field for HR in a rare flow |
 | 6 | **Salary history as an append-only table**, written by the service | Audit trail is the #1 reason to leave spreadsheets | Only salary/currency changes are audited, not every field |
 | 7 | **Integer salaries (whole units)** | Annual salaries are never fractional; avoids float/Decimal issues in SQLite aggregates | Can't represent cents (not needed) |
@@ -24,6 +24,7 @@ is the quick overview.
 | 16 | **Domain error categories** (NotFound / Conflict / BusinessRule / ServiceUnavailable) mapped to HTTP once | Services stay HTTP-free; new errors need no infrastructure change | — |
 | 17 | **Alembic migrations + drift test** ([ADR 0004](adr/0004-sqlite-with-alembic.md)) | Schema can evolve with data in place; models can't silently diverge | One extra step on deploy (automated in the container) |
 | 18 | **Request IDs + access logs, liveness/readiness endpoints** | Minimum needed to debug production and run behind a load balancer | — |
+| 19 | **Index every read path** + query-plan tests ([ADR 0006](adr/0006-indexing.md)) | 4–40× faster reads at 200k rows; regressions caught in CI | Slower bulk writes (10k seed 0.12 s → 0.81 s) |
 | 15 | **Offset pagination** (page/page_size ≤ 100) | Users jump to page N; data set is small | Deep offsets would be slow at millions of rows (keyset pagination then) |
 
 ## Deliberately not built
@@ -36,7 +37,7 @@ Measured on a laptop (Apple Silicon) with 10,000 seeded employees, warm process:
 
 | Operation | Time | Target |
 |---|---|---|
-| Seed 10,000 employees (bulk Core insert, one transaction) | **0.12 s** | < 5 s |
+| Seed 10,000 employees (bulk Core insert, one transaction, 10 indexes + FTS) | **0.81 s** | < 5 s |
 | `GET /api/employees` page 1 | 1.8 ms | < 200 ms |
 | Search + filter + salary sort | 3.9 ms | < 200 ms |
 | `GET /api/insights/summary` | 2.0 ms | < 200 ms |

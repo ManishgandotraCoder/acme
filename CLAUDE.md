@@ -22,8 +22,13 @@ lessons learned while building it — see docs/AI_USAGE.md.
 - Services raise `app.core.errors` subclasses (NotFound / Conflict / BusinessRule /
   ServiceUnavailable); never raise `HTTPException` outside routers.
 - Services own the transaction (`commit`); repositories only build queries.
+- New or changed queries must be index-backed: add the read path to
+  `tests/unit/test_query_plans.py` (fails on table scans / in-memory sorts). See ADR 0006.
+- `annual_salary_usd` is derived. Never set it by hand in ORM code (model events do it);
+  bulk Core inserts must set it. Emails are stored lower-case.
 - Schema changes require an Alembic migration: `make migration m="..."`.
-  `tests/unit/core/test_migrations.py` fails on model/migration drift.
+  `tests/unit/core/test_migrations.py` fails on model/migration drift. A *batch* operation
+  on `employees` drops the full-text search triggers; re-create them in the same migration.
 - Frontend: `features/<name>` owns `api.ts`, `types.ts` (mirrors backend schemas), hooks,
   components. Shared code lives in `shared/`. Import across folders with `@/`.
 

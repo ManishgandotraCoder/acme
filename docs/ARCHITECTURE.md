@@ -106,7 +106,8 @@ erDiagram
         string department "indexed"
         string country "indexed"
         string currency "derived from country"
-        int annual_salary "local currency, indexed"
+        int annual_salary "local currency"
+        int annual_salary_usd "derived, indexed (sorting)"
         date hire_date
         datetime created_at
         datetime updated_at
@@ -122,8 +123,12 @@ erDiagram
         datetime changed_at
     }
 ```
-Composite index `(country, job_title)` serves the most common insight query. The schema is
-owned by Alembic; a test fails if models and migrations drift.
+Every read path is index-backed ([ADR 0006](adr/0006-indexing.md)): composite indexes for
+filtered lists, covering indexes for insights, an indexed stored `annual_salary_usd` for
+cross-currency sorting, and an FTS5 trigram index (`employees_search`, synced by triggers)
+for substring search. `tests/unit/test_query_plans.py` fails if any query falls back to a
+full scan or in-memory sort. The schema is owned by Alembic; a test fails if models and
+migrations drift.
 
 ## Assistant pipeline: the model never produces numbers
 

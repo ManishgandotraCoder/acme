@@ -8,7 +8,7 @@ import random
 from datetime import date, timedelta
 from pathlib import Path
 
-from app.shared.countries import get_country
+from app.shared.countries import get_country, to_usd
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -102,6 +102,7 @@ def generate_employees(
         department = rng.choices(departments, department_weights)[0]
         job_title, (low, high) = rng.choice(list(ROLES[department].items()))
 
+        salary = _local_salary(rng.uniform(low, high), country)
         rows.append(
             {
                 "full_name": f"{first} {last}",
@@ -111,7 +112,9 @@ def generate_employees(
                 "department": department,
                 "country": country,
                 "currency": get_country(country).currency,
-                "annual_salary": _local_salary(rng.uniform(low, high), country),
+                "annual_salary": salary,
+                # Bulk Core inserts bypass ORM events, so the derived value is set here.
+                "annual_salary_usd": to_usd(salary, country),
                 "hire_date": HIRE_DATE_START + timedelta(days=rng.randrange(hire_span_days)),
             }
         )

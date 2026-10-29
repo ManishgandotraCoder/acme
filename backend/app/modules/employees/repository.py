@@ -1,17 +1,26 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from sqlalchemy import Select, case, func, or_, select
+from sqlalchemy import ColumnElement, Select, func, or_, select, text
 from sqlalchemy.orm import Session
 
+from app.modules.employees import search_index
 from app.modules.employees.models import Employee
-from app.shared.countries import SUPPORTED_COUNTRIES
 
 
 class SortField(StrEnum):
     FULL_NAME = "full_name"
     ANNUAL_SALARY = "annual_salary"
     HIRE_DATE = "hire_date"
+
+
+# Salary sorts use the stored USD value so different currencies compare like with like,
+# and so the sort can walk an index instead of sorting every row.
+_SORT_COLUMNS = {
+    SortField.FULL_NAME: Employee.full_name,
+    SortField.ANNUAL_SALARY: Employee.annual_salary_usd,
+    SortField.HIRE_DATE: Employee.hire_date,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +44,9 @@ class EmployeeRepository:
         return self._session.get(Employee, employee_id)
 
     def get_by_email(self, email: str) -> Employee | None:
-        stmt = select(Employee).where(func.lower(Employee.email) == email.lower())
+        # Emails are stored lower-cased, so plain equality can use the unique index
+        # (wrapping the column in lower() would force a full scan).
+        stmt = select(Employee).where(Employee.email == email.strip().lower())
         return self._session.scalars(stmt).first()
 
     def delete(self, employee: Employee) -> None:
@@ -54,12 +65,15 @@ class EmployeeRepository:
         base = self._apply_filters(select(Employee), filters)
         total = self._session.scalar(select(func.count()).select_from(base.subquery())) or 0
 
-        sort_column = (
-            _salary_in_usd() if sort is SortField.ANNUAL_SALARY else getattr(Employee, sort.value)
-        )
+        sort_column = _SORT_COLUMNS[sort]
+        if sort is SortField.ANNUAL_SALARY and filters.country:
+            # One country = one currency, so local order equals USD order. Sorting by the
+            # local amount is exact (no rounding ties) and walks (country, annual_salary).
+            sort_column = Employee.annual_salary
         order = sort_column.desc() if descending else sort_column.asc()
+        tie_breaker = Employee.id.desc() if descending else Employee.id.asc()
         stmt = (
-            base.order_by(order, Employee.id)  # id tie-breaker keeps paging stable
+            base.order_by(order, tie_breaker)  # id tie-breaker keeps paging stable
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -74,11 +88,9 @@ class EmployeeRepository:
     def _distinct(self, column) -> list[str]:
         return list(self._session.scalars(select(column).distinct().order_by(column)))
 
-    @staticmethod
-    def _apply_filters(stmt: Select, f: EmployeeFilter) -> Select:
-        if f.search:
-            pattern = f"%{f.search.strip()}%"
-            stmt = stmt.where(or_(Employee.full_name.ilike(pattern), Employee.email.ilike(pattern)))
+    def _apply_filters(self, stmt: Select, f: EmployeeFilter) -> Select:
+        if f.search and f.search.strip():
+            stmt = stmt.where(self._search_condition(f.search.strip()))
         if f.country:
             stmt = stmt.where(Employee.country == f.country)
         if f.department:
@@ -87,8 +99,15 @@ class EmployeeRepository:
             stmt = stmt.where(Employee.job_title == f.job_title)
         return stmt
 
-
-def _salary_in_usd():
-    """Salaries are in local currency; ranking them must compare like with like."""
-    rates = {c.name: c.usd_rate for c in SUPPORTED_COUNTRIES}
-    return Employee.annual_salary * case(rates, value=Employee.country, else_=1.0)
+    def _search_condition(self, term: str) -> ColumnElement[bool]:
+        uses_index = (
+            self._session.get_bind().dialect.name == "sqlite"
+            and len(term) >= search_index.MIN_TERM_LENGTH
+        )
+        if uses_index:
+            matches = text(
+                f"SELECT rowid FROM {search_index.TABLE} WHERE {search_index.TABLE} MATCH :term"
+            ).bindparams(term=search_index.match_expression(term))
+            return Employee.id.in_(matches)
+        pattern = f"%{term}%"
+        return or_(Employee.full_name.ilike(pattern), Employee.email.ilike(pattern))

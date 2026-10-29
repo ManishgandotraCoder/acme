@@ -56,12 +56,14 @@ make check        # what CI runs: lint + types + all tests
 
 | | Backend | Frontend |
 |---|---|---|
-| Tests | 114 in ~0.6 s, 97% coverage | 26 in ~3 s |
+| Tests | 143 in ~1 s | 44 in ~4 s |
 | Static checks | ruff (lint + format) | ESLint, `tsc --strict` |
 
 - **Deterministic:** in-memory SQLite per test, seeded RNG, fake LLM, mocked HTTP. No network.
 - **Architecture tests** enforce module boundaries ([ADR 0001](docs/adr/0001-modular-monolith.md)).
 - **Migration drift test:** models and Alembic migrations can't diverge.
+- **Query-plan tests:** every read path must use an index, with no full scans or in-memory
+  sorts ([ADR 0006](docs/adr/0006-indexing.md)).
 - Warnings fail the backend suite. Pre-commit hooks and
   [CI](.github/workflows/ci.yml) run lint, tests, build and the Docker image.
 

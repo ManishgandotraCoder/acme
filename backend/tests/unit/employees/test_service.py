@@ -121,3 +121,14 @@ def test_delete_removes_employee(service):
     service.delete(employee.id)
     with pytest.raises(EmployeeNotFoundError):
         service.get(employee.id)
+
+
+def test_usd_salary_is_kept_in_sync_for_sorting(service):
+    employee = service.create(_payload(country="India", annual_salary=1_000_000))
+    assert employee.annual_salary_usd == 12_000
+
+    service.update(employee.id, EmployeeUpdate(annual_salary=2_000_000))
+    assert service.get(employee.id).annual_salary_usd == 24_000
+
+    service.update(employee.id, EmployeeUpdate(country="Germany", annual_salary=50_000))
+    assert service.get(employee.id).annual_salary_usd == 54_000

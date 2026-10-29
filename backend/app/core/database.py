@@ -9,6 +9,20 @@ class Base(DeclarativeBase):
     pass
 
 
+SEARCH_TABLE_SUFFIX = "_search"
+
+
+def search_table_name(table: str) -> str:
+    """Naming convention for full-text search tables owned by raw DDL, not the ORM."""
+    return f"{table}{SEARCH_TABLE_SUFFIX}"
+
+
+def is_search_table(name: str) -> bool:
+    """Search tables (and FTS5's shadow tables, e.g. employees_search_data) live outside
+    ``Base.metadata``; migration autogenerate and drift checks must ignore them."""
+    return SEARCH_TABLE_SUFFIX in name
+
+
 def make_engine(database_url: str) -> Engine:
     kwargs: dict = {}
     if database_url.startswith("sqlite"):

@@ -1,3 +1,5 @@
+import pytest
+
 from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
 from tests.conftest import build_employee
 
@@ -117,3 +119,58 @@ def test_salary_sort_compares_across_currencies_in_usd(session):
     )
 
     assert [e.country for e in items] == ["United States", "Germany", "India"]
+
+
+# --- Full-text search index ------------------------------------------------------------
+
+
+def _names(repo, term):
+    return sorted(e.full_name for e in repo.search(EmployeeFilter(search=term))[0])
+
+
+def test_search_matches_substrings_case_insensitively(session):
+    _seed(session, build_employee(full_name="Priya Patel", email="priya.patel@example.com"))
+    repo = EmployeeRepository(session)
+
+    assert _names(repo, "ATEL") == ["Priya Patel"]
+    assert _names(repo, "iya.pa") == ["Priya Patel"]  # matches inside the email
+
+
+def test_short_terms_fall_back_to_a_scan_and_still_match(session):
+    _seed(session, build_employee(full_name="Bo Li", email="bo@example.com"))
+    assert _names(EmployeeRepository(session), "Li") == ["Bo Li"]
+
+
+def test_search_index_follows_renames_and_deletes(session):
+    repo = EmployeeRepository(session)
+    employee = repo.add(build_employee(full_name="Grace Hopper"))
+    session.commit()
+
+    employee.full_name = "Grace Brewster"
+    session.commit()
+    assert _names(repo, "hopper") == []
+    assert _names(repo, "brewster") == ["Grace Brewster"]
+
+    repo.delete(employee)
+    session.commit()
+    assert _names(repo, "brewster") == []
+
+
+@pytest.mark.parametrize("term", ['"quoted"', "a OR b", "NEAR(x y)", "x*", "-minus", "'; DROP"])
+def test_search_input_is_never_interpreted_as_query_syntax(session, term):
+    _seed(session, build_employee())
+    assert EmployeeRepository(session).search(EmployeeFilter(search=term))[1] == 0
+
+
+def test_salary_sort_within_one_country_matches_usd_order(session):
+    _seed(
+        session,
+        build_employee(email="a@example.com", country="India", currency="INR", annual_salary=950),
+        build_employee(email="b@example.com", country="India", currency="INR", annual_salary=900),
+    )
+    # Both round to USD 11 and the id tie-breaker would put 900 first; only the local
+    # amount orders them correctly.
+    items, _ = EmployeeRepository(session).search(
+        EmployeeFilter(country="India"), sort=SortField.ANNUAL_SALARY, descending=True
+    )
+    assert [e.annual_salary for e in items] == [950, 900]
