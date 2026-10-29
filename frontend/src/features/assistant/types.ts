@@ -40,3 +40,10 @@ export interface AskResult {
   suggestions: string[]
   provider: string | null
 }
+
+export interface ProviderInfo {
+  id: string
+  label: string
+  model: string
+  default: boolean
+}

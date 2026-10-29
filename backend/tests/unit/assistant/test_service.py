@@ -145,6 +145,9 @@ def test_answers_salary_gap_between_levels(session):
     result = _ask(session, {"metric": "level_stats"}, "What is the salary gap between job levels?")
 
     assert [row["job_level"] for row in result.table.rows] == ["Junior", "Senior"]
+    # The visual matches the headline: like-for-like gaps, not org-wide medians.
+    assert result.chart.y == "gap_to_previous_pct"
+    assert [c.key for c in result.table.columns][:2] == ["job_level", "gap_to_previous_pct"]
     assert "Senior USD 76,200" in result.answer
     assert "same job title and country" in result.scope
 
@@ -200,6 +203,8 @@ def test_outliers_name_people_for_someone_allowed_to_see_individual_pay(peers):
     assert result.kind == "answer"
     assert result.table.rows[0]["full_name"] == "Olive Outlier"
     assert "+100.0%" in result.answer
+    # Who and by how much come first: the table scrolls sideways in the chat.
+    assert [c.key for c in result.table.columns][:2] == ["full_name", "deviation_pct"]
 
 
 @pytest.mark.parametrize("metric", ["outliers", "above_department_average"])
@@ -223,6 +228,7 @@ def test_small_groups_are_hidden_from_someone_without_individual_access(seeded):
 def test_answers_above_department_average(peers):
     result = _ask(peers, {"metric": "above_department_average"}, "Who earns above average?")
     assert result.answer.startswith("1 of 6 employees earn above their department's average")
+    assert [c.key for c in result.table.columns][:2] == ["full_name", "above_by_usd"]
 
 
 # --- Ambiguity and unsupported questions ---------------------------------------------------

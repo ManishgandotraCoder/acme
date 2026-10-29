@@ -1,11 +1,11 @@
-export type AnswerParts = { title: string; items: string[] } | { text: string }
+export type AnswerParts = { lead: string | null; title: string; items: string[] } | { text: string }
 
 /**
- * The backend renders ranked answers as "Title: a; b; c." — show those as a list.
- * Anything else (single facts, help text) stays as plain text.
+ * The backend renders ranked answers as "[Lead sentence.] Title: a; b; c." — show the list as a
+ * list (or drop it when a table already shows the same rows). Anything else stays plain text.
  */
 export function toAnswerParts(answer: string): AnswerParts {
-  const match = /^([^:]+): (.+;.+)\.$/.exec(answer)
+  const match = /^(?:(.*\.) )?([^:.;]+): ([^:]+;[^:]+)\.$/.exec(answer)
   if (!match) return { text: answer }
-  return { title: match[1], items: match[2].split('; ') }
+  return { lead: match[1] ?? null, title: match[2], items: match[3].split('; ') }
 }

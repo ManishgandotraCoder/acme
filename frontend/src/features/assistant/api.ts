@@ -1,6 +1,8 @@
 import { request } from '@/shared/api/client'
-import type { AskResult } from './types'
+import type { AskResult, ProviderInfo } from './types'
 
 export const assistantApi = {
-  ask: (question: string) => request<AskResult>('/api/ask', { method: 'POST', body: { question } }),
+  providers: () => request<ProviderInfo[]>('/api/assistant/providers'),
+  ask: (question: string, provider?: string) =>
+    request<AskResult>('/api/ask', { method: 'POST', body: { question, provider } }),
 }

@@ -291,14 +291,14 @@ class AnswerComposer:
             Table(
                 columns=[
                     Column(key="job_level", label="Level"),
+                    Column(key="gap_to_previous_pct", label="vs level below", format="percent"),
+                    Column(key="median_salary_usd", label="Median (org-wide)", format="usd"),
+                    Column(key="average_salary_usd", label="Average (org-wide)", format="usd"),
                     Column(key="headcount", label="Employees", format="number"),
-                    Column(key="median_salary_usd", label="Median salary", format="usd"),
-                    Column(key="average_salary_usd", label="Average salary", format="usd"),
-                    Column(key="gap_to_previous_pct", label="Gap to level below", format="percent"),
                 ],
                 rows=rows,
             ),
-            Chart(x="job_level", y="median_salary_usd", label="Median salary (USD)"),
+            Chart(x="job_level", y="gap_to_previous_pct", label="Pay vs level below (%)"),
             scope=scope,
         )
 
@@ -338,12 +338,12 @@ class AnswerComposer:
             Table(
                 columns=[
                     Column(key="full_name", label="Employee"),
+                    Column(key="deviation_pct", label="vs peers", format="percent"),
+                    Column(key="annual_salary", label="Salary", format="local"),
+                    Column(key="peer_median_salary", label="Peer median", format="local"),
                     Column(key="job_title", label="Job title"),
                     Column(key="job_level", label="Level"),
                     Column(key="country", label="Country"),
-                    Column(key="annual_salary", label="Salary", format="local"),
-                    Column(key="peer_median_salary", label="Peer median", format="local"),
-                    Column(key="deviation_pct", label="Difference", format="percent"),
                 ],
                 rows=[o.model_dump() for o in found],
             ),
@@ -374,12 +374,12 @@ class AnswerComposer:
             Table(
                 columns=[
                     Column(key="full_name", label="Employee"),
-                    Column(key="job_title", label="Job title"),
-                    Column(key="department", label="Department"),
-                    Column(key="country", label="Country"),
+                    Column(key="above_by_usd", label="Above average by", format="usd"),
                     Column(key="annual_salary_usd", label="Salary", format="usd"),
                     Column(key="department_average_usd", label="Department average", format="usd"),
-                    Column(key="above_by_usd", label="Above by", format="usd"),
+                    Column(key="department", label="Department"),
+                    Column(key="job_title", label="Job title"),
+                    Column(key="country", label="Country"),
                 ],
                 rows=[t.model_dump() for t in report.top],
             ),

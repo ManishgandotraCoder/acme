@@ -8,6 +8,7 @@ import {
   Group,
   Paper,
   ScrollArea,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -15,20 +16,31 @@ import {
   Tooltip,
   Transition,
 } from '@mantine/core'
-import { IconAlertTriangle, IconMessageChatbot, IconRefresh, IconSend2, IconSparkles } from '@tabler/icons-react'
-import { useMutation } from '@tanstack/react-query'
+import {
+  IconAlertTriangle,
+  IconInfoCircle,
+  IconLock,
+  IconMessageChatbot,
+  IconRefresh,
+  IconSend2,
+  IconSparkles,
+} from '@tabler/icons-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { assistantApi } from '@/features/assistant/api'
 import type { AskResult } from '@/features/assistant/types'
 import { toAnswerParts } from './answerFormat'
+import { AnswerEvidence } from './AnswerEvidence'
 import { WorkingIndicator } from '@/shared/ui/loading'
 
 const EXAMPLES = [
-  'What do software engineers earn in India?',
-  'Which department has the highest average pay?',
-  'Compare product manager salaries across countries',
-  'Give me pay statistics for Japan',
+  'What are the average and median salaries across the organization?',
+  'Which department has the highest median salary?',
+  'Compare average salaries across countries',
+  'What is the salary gap between job levels?',
+  'Which employees earn significantly more or less than peers?',
+  'How have salaries changed over the last 12 months?',
 ]
 
 const METRIC_LABELS: Record<string, string> = {
@@ -72,8 +84,13 @@ export function ChatWidget() {
   const append = (message: NewMessage) =>
     setMessages((previous) => [...previous, { ...message, id: nextId.current++ }])
 
+  const providers = useQuery({ queryKey: ['assistant', 'providers'], queryFn: assistantApi.providers })
+  const [chosenProvider, setChosenProvider] = useState<string | null>(null)
+  const provider = chosenProvider ?? providers.data?.find((p) => p.default)?.id
+  const providerLabel = (id: string | null) => providers.data?.find((p) => p.id === id)?.label ?? id
+
   const ask = useMutation({
-    mutationFn: (question: string) => assistantApi.ask(question),
+    mutationFn: (question: string) => assistantApi.ask(question, provider),
     onSuccess: (result) => append({ role: 'assistant', result }),
     onError: (error) =>
       append({ role: 'error', text: `${error.message} Pay insights still work without the assistant.` }),
@@ -131,8 +148,8 @@ export function ChatWidget() {
               position: 'fixed',
               right: 'max(16px, min(24px, 3vw))',
               bottom: 'max(16px, min(24px, 3vw))',
-              width: 'min(400px, calc(100vw - 32px))',
-              height: 'min(600px, calc(100dvh - 32px))',
+              width: 'min(480px, calc(100vw - 32px))',
+              height: 'min(680px, calc(100dvh - 32px))',
               zIndex: 200,
               display: 'flex',
               flexDirection: 'column',
@@ -168,25 +185,15 @@ export function ChatWidget() {
             <ScrollArea flex={1} viewportRef={viewport} px="md" py="sm">
               <Stack gap="sm" pb="xs">
                 <Bubble from="assistant">
-                  Hi! Ask me how ACME pays people, by country, role or department. I look the numbers up in
-                  the salary database.
+                  Hi! Ask me how ACME pays people: averages and medians, departments, countries, levels,
+                  outliers, salary bands or trends. I look the numbers up in the salary database.
                 </Bubble>
                 {messages.length === 0 && (
                   <Stack gap={6} align="flex-start">
                     {EXAMPLES.map((example) => (
-                      <Button
-                        key={example}
-                        variant="light"
-                        size="xs"
-                        radius="xl"
-                        h="auto"
-                        py={6}
-                        fw={500}
-                        styles={{ label: { whiteSpace: 'normal', textAlign: 'left' } }}
-                        onClick={() => send(example)}
-                      >
+                      <SuggestionButton key={example} onClick={() => send(example)}>
                         {example}
-                      </Button>
+                      </SuggestionButton>
                     ))}
                   </Stack>
                 )}
@@ -201,21 +208,50 @@ export function ChatWidget() {
                         </Group>
                       </Bubble>
                     )
-                  const { answer, intent } = m.result
+                  const { answer, intent, kind, table, suggestions } = m.result
                   return (
-                    <Bubble key={m.id} from="assistant">
-                      <AnswerText answer={answer} />
+                    <Bubble key={m.id} from="assistant" wide={table !== null}>
+                      {kind === 'forbidden' ? (
+                        <Group gap={6} wrap="nowrap" align="flex-start">
+                          <IconLock size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span>{answer}</span>
+                        </Group>
+                      ) : (
+                        <AnswerText answer={answer} hasTable={table !== null} />
+                      )}
+                      <AnswerEvidence result={m.result} />
+                      {suggestions.length > 0 && (
+                        <Stack gap={4} mt={8} align="flex-start">
+                          {suggestions.map((suggestion) => (
+                            <SuggestionButton key={suggestion} onClick={() => send(suggestion)}>
+                              {suggestion}
+                            </SuggestionButton>
+                          ))}
+                        </Stack>
+                      )}
+                      {m.result.scope && (
+                        <Group gap={4} mt={8} wrap="nowrap" align="flex-start" c="dimmed">
+                          <IconInfoCircle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                          <Text size="xs">{m.result.scope}</Text>
+                        </Group>
+                      )}
                       <Group gap={4} mt={8}>
-                        <IntentBadge variant="light">{METRIC_LABELS[intent.metric] ?? intent.metric}</IntentBadge>
-                        {intent.countries.map((c) => (
-                          <IntentBadge key={c}>Country: {c}</IntentBadge>
-                        ))}
-                        {intent.job_titles.map((t) => (
-                          <IntentBadge key={t}>Job title: {t}</IntentBadge>
-                        ))}
-                        {intent.departments.map((d) => (
-                          <IntentBadge key={d}>Department: {d}</IntentBadge>
-                        ))}
+                        {/* How the question was understood; only an answer actually used it. */}
+                        {kind === 'answer' && (
+                          <>
+                            <IntentBadge variant="light">{METRIC_LABELS[intent.metric] ?? intent.metric}</IntentBadge>
+                            {intent.countries.map((c) => (
+                              <IntentBadge key={c}>Country: {c}</IntentBadge>
+                            ))}
+                            {intent.job_titles.map((t) => (
+                              <IntentBadge key={t}>Job title: {t}</IntentBadge>
+                            ))}
+                            {intent.departments.map((d) => (
+                              <IntentBadge key={d}>Department: {d}</IntentBadge>
+                            ))}
+                          </>
+                        )}
+                        {m.result.provider && <IntentBadge>via {providerLabel(m.result.provider)}</IntentBadge>}
                       </Group>
                     </Bubble>
                   )
@@ -239,6 +275,19 @@ export function ChatWidget() {
                 send(draft)
               }}
             >
+              {(providers.data?.length ?? 0) > 1 && (
+                <Select
+                  aria-label="Model"
+                  size="xs"
+                  mb={6}
+                  w={200}
+                  allowDeselect={false}
+                  data={providers.data!.map((p) => ({ value: p.id, label: `${p.label} · ${p.model}` }))}
+                  value={provider ?? null}
+                  onChange={setChosenProvider}
+                  comboboxProps={{ withinPortal: false }}
+                />
+              )}
               <Group gap="xs" align="flex-end" wrap="nowrap">
                 <Textarea
                   ref={input}
@@ -274,11 +323,14 @@ export function ChatWidget() {
   )
 }
 
-function AnswerText({ answer }: { answer: string }) {
+/** Answer text; a list the table below already shows is reduced to its lead sentence. */
+function AnswerText({ answer, hasTable }: { answer: string; hasTable: boolean }) {
   const parts = toAnswerParts(answer)
   if ('text' in parts) return <>{parts.text}</>
+  if (hasTable) return <>{parts.lead ?? `${parts.title}:`}</>
   return (
     <>
+      {parts.lead && <Text size="sm">{parts.lead}</Text>}
       {parts.title}
       <List size="sm" spacing={2} mt={4}>
         {parts.items.map((item) => (
@@ -286,6 +338,23 @@ function AnswerText({ answer }: { answer: string }) {
         ))}
       </List>
     </>
+  )
+}
+
+function SuggestionButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <Button
+      variant="light"
+      size="xs"
+      radius="xl"
+      h="auto"
+      py={6}
+      fw={500}
+      styles={{ label: { whiteSpace: 'normal', textAlign: 'left' } }}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
   )
 }
 
@@ -303,7 +372,7 @@ const BUBBLE_STYLES = {
   error: { bg: 'var(--mantine-color-red-light)', c: 'var(--mantine-color-red-light-color)', align: 'flex-start', corner: 'borderBottomLeftRadius' },
 } as const
 
-function Bubble({ from, children }: { from: keyof typeof BUBBLE_STYLES; children: ReactNode }) {
+function Bubble({ from, wide, children }: { from: keyof typeof BUBBLE_STYLES; wide?: boolean; children: ReactNode }) {
   const s = BUBBLE_STYLES[from]
   return (
     <Box
@@ -311,7 +380,8 @@ function Bubble({ from, children }: { from: keyof typeof BUBBLE_STYLES; children
       c={s.c}
       px="sm"
       py={8}
-      maw="85%"
+      maw={wide ? '100%' : '85%'}
+      w={wide ? '100%' : undefined}
       style={{ alignSelf: s.align, borderRadius: 16, [s.corner]: 4, fontSize: 'var(--mantine-font-size-sm)', lineHeight: 1.45 }}
     >
       {children}
