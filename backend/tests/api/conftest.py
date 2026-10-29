@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.dependencies import get_session
 from app.main import create_app
+from app.modules.assistant.providers import Provider, ProviderRegistry
 
 
 class StubLLM:
@@ -26,11 +27,25 @@ def llm() -> StubLLM:
 
 
 @pytest.fixture
-def make_client(postgres_url: str, session: Session, llm: StubLLM):
+def cloud_llm() -> StubLLM:
+    return StubLLM()
+
+
+@pytest.fixture
+def make_client(postgres_url: str, session: Session, llm: StubLLM, cloud_llm: StubLLM):
     """Build a TestClient whose requests share the test's rolled-back transaction."""
+    providers = ProviderRegistry(
+        [
+            Provider("ollama", "Ollama (local)", "llama3.2", llm),
+            Provider("openai", "OpenAI", "gpt-test", cloud_llm),
+        ],
+        default="ollama",
+    )
 
     def _make(**settings) -> TestClient:
-        app: FastAPI = create_app(Settings(database_url=postgres_url, **settings), llm=llm)
+        app: FastAPI = create_app(
+            Settings(database_url=postgres_url, **settings), providers=providers
+        )
         app.dependency_overrides[get_session] = lambda: session
         return TestClient(app)
 

@@ -21,3 +21,8 @@ def test_plain_postgres_urls_from_hosting_providers_use_the_psycopg_driver(given
 def test_urls_that_already_name_a_driver_are_left_alone():
     url = "postgresql+psycopg://salary:salary@localhost:5433/salary"
     assert Settings(database_url=url).database_url == url
+
+
+def test_a_blank_model_provider_means_the_default():
+    # Hosting dashboards may set an optional variable to "" rather than leaving it unset.
+    assert Settings(llm_provider="").llm_provider == "ollama"

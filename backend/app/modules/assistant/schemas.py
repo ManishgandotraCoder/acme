@@ -59,6 +59,13 @@ class AskRequest(BaseModel):
     provider: str | None = None
 
 
+class ProviderInfo(BaseModel):
+    id: str
+    label: str
+    model: str
+    default: bool
+
+
 class Column(BaseModel):
     key: str
     label: str

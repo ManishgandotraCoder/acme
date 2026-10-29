@@ -1,8 +1,9 @@
 # Render blueprint: https://render.com/docs/blueprint-spec
 # Dashboard → New → Blueprint → pick this repo. Render builds the Dockerfile, provisions
 # PostgreSQL and injects its URL; the container migrates, seeds 10k employees on first boot
-# and serves UI + API on one URL. Ollama isn't hosted here, so Ask AI answers "unavailable"
-# (503) while the rest of the app works (see docs/adr/0005-single-container-deployment.md).
+# and serves UI + API on one URL. Ollama isn't hosted here: set ANTHROPIC_API_KEY or
+# OPENAI_API_KEY in the dashboard (and SALARY_LLM_PROVIDER to anthropic/openai) to enable the
+# assistant; without them it answers "unavailable" (503) while the rest of the app works.
 services:
   - type: web
     name: acme-salary
@@ -17,6 +18,13 @@ services:
         fromDatabase:
           name: acme-salary-db
           property: connectionString
+      # Secrets: entered in the Render dashboard, never committed (sync: false).
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SALARY_LLM_PROVIDER
+        sync: false
 
 databases:
   - name: acme-salary-db

@@ -1,8 +1,6 @@
-import json
-
 import httpx
 
-from app.modules.assistant.llm import LLMUnavailableError
+from app.modules.assistant.llm import LLMUnavailableError, parse_json_object
 
 
 class OllamaClient:
@@ -11,6 +9,9 @@ class OllamaClient:
     def __init__(self, http: httpx.Client, model: str) -> None:
         self._http = http
         self._model = model
+
+    def close(self) -> None:
+        self._http.close()
 
     def complete_json(self, system: str, user: str, schema: dict) -> dict:
         payload = {
@@ -29,9 +30,4 @@ class OllamaClient:
         except httpx.HTTPError as exc:
             raise LLMUnavailableError(f"Ollama request failed: {exc}") from exc
 
-        content = response.json().get("message", {}).get("content", "")
-        try:
-            parsed = json.loads(content)
-        except json.JSONDecodeError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
+        return parse_json_object(response.json().get("message", {}).get("content", ""))

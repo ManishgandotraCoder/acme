@@ -22,6 +22,9 @@ services:
       SALARY_DATABASE_URL: postgresql+psycopg://salary:salary@postgres:5432/salary
       SALARY_OLLAMA_URL: http://ollama:11434
       SALARY_OLLAMA_MODEL: llama3.2
+      # Optional cloud models, passed through from the host environment when set.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     depends_on:
       postgres: { condition: service_healthy }
       ollama: { condition: service_started }

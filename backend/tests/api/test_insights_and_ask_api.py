@@ -61,3 +61,25 @@ def test_individual_level_insights_need_permission(make_client, path):
 
     assert response.status_code == 403
     assert "individual" in response.json()["detail"]
+
+
+def test_lists_configured_model_providers_with_the_default(client):
+    providers = client.get("/api/assistant/providers").json()
+    assert [(p["id"], p["default"]) for p in providers] == [("ollama", True), ("openai", False)]
+
+
+def test_a_question_can_choose_a_configured_provider(client, create_employee, llm, cloud_llm):
+    create_employee()
+    llm.response = LLMUnavailableError("would fail if used")
+    cloud_llm.response = {"metric": "org_summary"}
+
+    body = client.post("/api/ask", json={"question": "Headcount?", "provider": "openai"}).json()
+
+    assert body["provider"] == "openai"
+    assert body["answer"].startswith("ACME has 1 employee")
+
+
+def test_choosing_an_unconfigured_provider_is_422(client):
+    response = client.post("/api/ask", json={"question": "Headcount?", "provider": "anthropic"})
+    assert response.status_code == 422
+    assert "ollama, openai" in response.json()["detail"]
