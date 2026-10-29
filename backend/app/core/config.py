@@ -2,6 +2,8 @@ from functools import lru_cache
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import make_url
+from sqlalchemy.exc import ArgumentError
 
 # Hosting providers (Render, Heroku, ...) hand out driver-less URLs; SQLAlchemy would then pick
 # psycopg2, which isn't installed.
@@ -10,7 +12,12 @@ _DRIVERLESS_SCHEMES = ("postgres://", "postgresql://")
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="SALARY_", env_file=".env", extra="ignore", populate_by_name=True
+        env_prefix="SALARY_",
+        env_file=".env",
+        extra="ignore",
+        populate_by_name=True,
+        # Settings hold secrets (database password, API keys): never echo them in errors.
+        hide_input_in_errors=True,
     )
 
     # Local docker-compose Postgres. Any real database URL carries a password: set it in
@@ -52,6 +59,19 @@ class Settings(BaseSettings):
         for scheme in _DRIVERLESS_SCHEMES:
             if url.startswith(scheme):
                 return "postgresql+psycopg://" + url.removeprefix(scheme)
+        return url
+
+    @field_validator("database_url")
+    @classmethod
+    def _host_must_be_a_valid_name(cls, url: str) -> str:
+        # Otherwise a mistyped host fails deep inside DNS ("label empty or too long").
+        try:
+            host = make_url(url).host or ""
+        except ArgumentError:
+            raise ValueError("SALARY_DATABASE_URL is not a database URL") from None
+        labels = host.removesuffix(".").split(".")
+        if host and any(not 0 < len(label) <= 63 for label in labels):
+            raise ValueError(f"SALARY_DATABASE_URL has an invalid host name: {host!r}")
         return url
 
 
