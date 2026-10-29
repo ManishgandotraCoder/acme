@@ -36,6 +36,29 @@ describe('EmployeesPage', () => {
     expect(screen.queryByText('No employees match these filters.')).not.toBeInTheDocument()
   })
 
+  it('numbers rows by their position in the whole list, continuing across pages', async () => {
+    vi.spyOn(employeesApi, 'list').mockImplementation(async (query) => ({
+      items: [
+        buildEmployee({ id: query.page * 10 + 1, full_name: `First on page ${query.page}` }),
+        buildEmployee({ id: query.page * 10 + 2, full_name: `Second on page ${query.page}` }),
+      ],
+      total: 60,
+      page: query.page,
+      page_size: 25,
+    }))
+    const { user } = renderWithProviders(<EmployeesPage />)
+
+    const first = await screen.findByRole('row', { name: /first on page 1/i })
+    expect(within(first).getByRole('cell', { name: '1' })).toBeInTheDocument()
+    const second = screen.getByRole('row', { name: /second on page 1/i })
+    expect(within(second).getByRole('cell', { name: '2' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '2' }))
+
+    const firstOnPage2 = await screen.findByRole('row', { name: /first on page 2/i })
+    expect(within(firstOnPage2).getByRole('cell', { name: '26' })).toBeInTheDocument()
+  })
+
   it('searches by name after the user stops typing', async () => {
     const { user } = renderWithProviders(<EmployeesPage />)
     await screen.findByText('Ada Lovelace')

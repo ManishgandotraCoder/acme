@@ -104,6 +104,8 @@ export function EmployeesPage() {
 
   const total = employees.data?.total ?? 0
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  // Number rows from the page the server returned, so they stay right while the next page loads.
+  const firstRowNumber = employees.data ? (employees.data.page - 1) * employees.data.page_size + 1 : 1
 
   return (
     <Stack>
@@ -179,6 +181,9 @@ export function EmployeesPage() {
           <Table striped highlightOnHover verticalSpacing="xs">
             <Table.Thead>
               <Table.Tr>
+                <Table.Th w={64} ta="right">
+                  #
+                </Table.Th>
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Job title</Table.Th>
                 <Table.Th>Department</Table.Th>
@@ -189,9 +194,12 @@ export function EmployeesPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody style={{ opacity: employees.isPlaceholderData ? 0.6 : 1, transition: 'opacity 150ms' }}>
-              {employees.isPending && <SkeletonRows rows={10} columns={7} />}
-              {employees.data?.items.map((e) => (
+              {employees.isPending && <SkeletonRows rows={10} columns={8} />}
+              {employees.data?.items.map((e, i) => (
                 <Table.Tr key={e.id}>
+                  <Table.Td ta="right" c="dimmed" ff="monospace" fz="sm">
+                    {formatNumber(firstRowNumber + i)}
+                  </Table.Td>
                   <Table.Td>
                     <Text size="sm" fw={500}>
                       {e.full_name}
@@ -218,7 +226,7 @@ export function EmployeesPage() {
               ))}
               {employees.data?.items.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={7}>
+                  <Table.Td colSpan={8}>
                     <Text c="dimmed" ta="center" py="lg">
                       No employees match these filters.
                     </Text>
