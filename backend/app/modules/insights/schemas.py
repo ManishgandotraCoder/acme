@@ -44,7 +44,8 @@ class LevelStats(BaseModel):
     headcount: int
     average_salary_usd: int
     median_salary_usd: int
-    # Median vs the next level down that has people, in percent; None for the first level.
+    # Median pay vs the level below for the same job title in the same country, in percent
+    # (weighted over such groups); None for the first level or when no group has both levels.
     gap_to_previous_pct: float | None
 
 

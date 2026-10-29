@@ -61,6 +61,14 @@ class Employee(Base):
         Index("ix_employees_country_job_title_salary", "country", "job_title", "annual_salary"),
         Index("ix_employees_department_country_salary", "department", "country", "annual_salary"),
         Index("ix_employees_country_department_salary", "country", "department", "annual_salary"),
+        # Peer groups (same title, country, level): like-for-like level gaps and outliers.
+        Index(
+            "ix_employees_title_country_level_salary",
+            "job_title",
+            "country",
+            "job_level",
+            "annual_salary",
+        ),
         # Search: trigram GIN indexes let ILIKE '%term%' use an index (pg_trgm).
         Index(
             "ix_employees_full_name_trgm",

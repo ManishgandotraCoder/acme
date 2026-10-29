@@ -57,7 +57,7 @@ def levels(session):
     )
 
 
-def test_level_stats_follow_the_ladder_with_gaps_between_medians(levels):
+def test_level_stats_follow_the_ladder_with_gaps_between_comparable_roles(levels):
     junior, mid, senior = levels.level_stats()
 
     assert [s.job_level for s in (junior, mid, senior)] == ["Junior", "Mid", "Senior"]
@@ -67,8 +67,29 @@ def test_level_stats_follow_the_ladder_with_gaps_between_medians(levels):
         None,
     )
     assert (mid.headcount, mid.median_salary_usd, mid.average_salary_usd) == (3, 120_000, 112_133)
-    assert mid.gap_to_previous_pct == pytest.approx(14.3, abs=0.05)
-    assert senior.gap_to_previous_pct == pytest.approx(33.3, abs=0.05)
+    # Gaps compare the same title in the same country (US: 105k -> 125k -> 160k); the German
+    # Mid has no German Junior to compare with, so it doesn't distort the gap.
+    assert mid.gap_to_previous_pct == pytest.approx(19.0)
+    assert senior.gap_to_previous_pct == pytest.approx(28.0)
+
+
+def test_level_gap_compares_like_with_like_not_the_country_mix(session):
+    insights = _add(
+        session,
+        dict(**US, job_level="Junior", annual_salary=100_000),
+        dict(**US, job_level="Senior", annual_salary=120_000),
+        # Many low-paid (in USD) Seniors elsewhere would make a naive org-wide median say
+        # Seniors earn less than Juniors.
+        *[
+            dict(country="India", currency="INR", job_level="Senior", annual_salary=3_000_000)
+            for _ in range(3)
+        ],
+    )
+
+    _, senior = insights.level_stats()
+
+    assert senior.median_salary_usd < 100_000  # the descriptive median is dragged down...
+    assert senior.gap_to_previous_pct == pytest.approx(20.0)  # ...the like-for-like gap isn't
 
 
 def test_level_stats_can_be_narrowed_to_a_country(levels):

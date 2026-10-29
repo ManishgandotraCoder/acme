@@ -179,7 +179,15 @@ class InsightsService:
         department: str | None = None,
         country: str | None = None,
     ) -> list[LevelStats]:
-        """Pay per job level, lowest first, with the gap between consecutive medians."""
+        """Pay per job level, lowest first.
+
+        Headcount, average and median describe each level as it is. The gap to the level below
+        compares like with like: within each peer group (same job title and country, so one
+        currency) the median of one level over the median of the level below, averaged over
+        groups weighted by headcount. An org-wide median per level would mostly measure which
+        countries each level happens to be in.
+        """
+        scope = dict(country=country, department=department, job_title=job_title)
         rows = self._session.execute(
             _scope(
                 select(
@@ -188,24 +196,34 @@ class InsightsService:
                     func.avg(Employee.annual_salary_usd),
                     _median_usd(),
                 ).group_by(Employee.job_level),
-                country=country,
-                department=department,
-                job_title=job_title,
+                **scope,
             )
         ).all()
+        group_key = (Employee.job_title, Employee.country)
+        group_medians: dict[tuple[str, str], dict[str, tuple[float, int]]] = defaultdict(dict)
+        for title, group_country, level, median, count in self._session.execute(
+            _scope(
+                select(
+                    *group_key,
+                    Employee.job_level,
+                    func.percentile_cont(0.5).within_group(Employee.annual_salary),
+                    func.count(),
+                ).group_by(*group_key, Employee.job_level),
+                **scope,
+            )
+        ):
+            group_medians[(title, group_country)][level] = (median, count)
 
         stats: list[LevelStats] = []
         for level, count, avg, median in sorted(rows, key=lambda r: level_rank(r[0])):
-            previous = stats[-1].median_salary_usd if stats else None
+            below = stats[-1].job_level if stats else None
             stats.append(
                 LevelStats(
                     job_level=level,
                     headcount=count,
                     average_salary_usd=round(avg),
                     median_salary_usd=round(median),
-                    gap_to_previous_pct=round((median - previous) / previous * 100, 1)
-                    if previous
-                    else None,
+                    gap_to_previous_pct=_like_for_like_gap(group_medians.values(), below, level),
                 )
             )
         return stats
@@ -222,7 +240,7 @@ class InsightsService:
         """Employees paid at least ``threshold_pct`` above or below the median of their peers:
         same job title, level and country (so local currency, no FX). Peer groups smaller than
         ``min_peers`` are skipped; their median says little."""
-        peer_key = (Employee.job_title, Employee.job_level, Employee.country)
+        peer_key = (Employee.job_title, Employee.country, Employee.job_level)
         peers = (
             select(
                 *peer_key,
@@ -404,6 +422,20 @@ class InsightsService:
                 for key in (m.strftime("%Y-%m") for m in month_starts)
             ],
         )
+
+
+def _like_for_like_gap(groups, lower: str | None, higher: str) -> float | None:
+    """Headcount-weighted mean of median(higher) / median(lower) - 1 over peer groups that have
+    both levels, in percent; None when no group has both."""
+    if lower is None:
+        return None
+    weighted, weights = 0.0, 0
+    for levels in groups:
+        if lower in levels and higher in levels:
+            (low_median, low_count), (high_median, high_count) = levels[lower], levels[higher]
+            weighted += (high_median / low_median) * (low_count + high_count)
+            weights += low_count + high_count
+    return round((weighted / weights - 1) * 100, 1) if weights else None
 
 
 def _raise_pct(window):
