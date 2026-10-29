@@ -25,6 +25,10 @@ class BusinessRuleError(DomainError):
     pass
 
 
+class PermissionDeniedError(DomainError):
+    """The actor may not see or do this."""
+
+
 class ServiceUnavailableError(DomainError):
     """A dependency failed. ``str(error)`` holds internal details for logs only."""
 

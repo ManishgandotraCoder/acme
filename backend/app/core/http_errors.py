@@ -8,6 +8,7 @@ from app.core.errors import (
     ConflictError,
     DomainError,
     NotFoundError,
+    PermissionDeniedError,
     ServiceUnavailableError,
 )
 
@@ -18,6 +19,7 @@ _STATUS_BY_CATEGORY: tuple[tuple[type[DomainError], int], ...] = (
     (NotFoundError, 404),
     (ConflictError, 409),
     (BusinessRuleError, 422),
+    (PermissionDeniedError, 403),
     (ServiceUnavailableError, 503),
     (DomainError, 400),
 )

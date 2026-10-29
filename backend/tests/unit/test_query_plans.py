@@ -4,7 +4,7 @@ These run the real repository/service calls and inspect PostgreSQL's EXPLAIN pla
 query change that silently falls back to a full table scan or an in-memory sort fails CI.
 """
 
-import random
+from datetime import date
 
 import pytest
 from sqlalchemy import select
@@ -13,19 +13,13 @@ from app.core.actor import SYSTEM
 from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
 from app.modules.employees.service import EmployeeService
 from app.modules.insights.service import InsightsService
-from app.seed.generator import generate_employees, load_names
+from app.seed.run import seed_database
 from tests.query_plans import query_plans, sorts, table_scans
 
 
 @pytest.fixture
 def seeded(session):
-    from app.modules.employees.models import Employee
-
-    first, last = load_names()
-    session.add_all(
-        Employee(**row) for row in generate_employees(300, random.Random(1), first, last)
-    )
-    session.commit()
+    seed_database(session, count=300, seed=1)  # employees + salary history
     return session
 
 
@@ -75,6 +69,19 @@ READ_PATHS = {
     "insights by department in a country": lambda s, eid: InsightsService(s).department_stats(
         "India"
     ),
+    "pay by level": lambda s, eid: InsightsService(s).level_stats(),
+    "pay by level for a role in a country": lambda s, eid: InsightsService(s).level_stats(
+        job_title="Software Engineer", country="India"
+    ),
+    "salary bands": lambda s, eid: InsightsService(s).salary_bands(),
+    "salary trends": lambda s, eid: InsightsService(s).salary_trends(as_of=date(2026, 9, 30)),
+}
+
+# Ranking computed values (deviation from peers, distance above an average) needs a final
+# top-N sort; the inputs must still come from indexes.
+RANKED_READ_PATHS = {
+    "outliers": lambda s: InsightsService(s).outliers(),
+    "above department average": lambda s: InsightsService(s).above_department_average(),
 }
 
 
@@ -82,6 +89,12 @@ READ_PATHS = {
 def test_read_path_uses_indexes_without_full_scans_or_sorts(seeded, employee_id, name):
     plans = query_plans(seeded, lambda: READ_PATHS[name](seeded, employee_id))
     assert table_scans(plans) + sorts(plans) == [], [str(n) for n in plans]
+
+
+@pytest.mark.parametrize("name", RANKED_READ_PATHS)
+def test_ranked_read_path_reads_through_indexes(seeded, name):
+    plans = query_plans(seeded, lambda: RANKED_READ_PATHS[name](seeded), allow_sort=True)
+    assert table_scans(plans) == [], [str(n) for n in plans]
 
 
 def test_email_lookup_uses_the_unique_index(seeded):

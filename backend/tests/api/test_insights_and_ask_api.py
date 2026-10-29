@@ -1,3 +1,5 @@
+import pytest
+
 from app.modules.assistant.llm import LLMUnavailableError
 
 
@@ -37,3 +39,25 @@ def test_ask_returns_503_when_llm_is_down(client, llm):
 
 def test_ask_rejects_blank_question(client):
     assert client.post("/api/ask", json={"question": "  "}).status_code == 422
+
+
+def test_pay_equity_distribution_and_trend_endpoints(client, create_employee):
+    create_employee()
+
+    assert client.get("/api/insights/levels").json()[0]["job_level"] == "Mid"
+    assert sum(b["headcount"] for b in client.get("/api/insights/salary-bands").json()) == 1
+    trend = client.get("/api/insights/salary-trends", params={"as_of": "2026-09-30"}).json()
+    assert len(trend["months"]) == 12
+    assert client.get("/api/insights/outliers").json() == []
+    assert client.get("/api/insights/above-department-average").json()["headcount"] == 1
+
+
+@pytest.mark.parametrize(
+    "path", ["/api/insights/outliers", "/api/insights/above-department-average"]
+)
+def test_individual_level_insights_need_permission(make_client, path):
+    with make_client(actor_permissions=[]) as client:
+        response = client.get(path)
+
+    assert response.status_code == 403
+    assert "individual" in response.json()["detail"]

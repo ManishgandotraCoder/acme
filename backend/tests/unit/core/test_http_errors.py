@@ -7,6 +7,7 @@ from app.core.errors import (
     ConflictError,
     DomainError,
     NotFoundError,
+    PermissionDeniedError,
     ServiceUnavailableError,
 )
 from app.core.http_errors import register_error_handlers
@@ -37,6 +38,7 @@ def _client_raising(error: Exception) -> TestClient:
         (MissingWidget("Widget 7 not found"), 404),
         (ConflictError("already exists"), 409),
         (BusinessRuleError("not allowed"), 422),
+        (PermissionDeniedError("not yours to see"), 403),
         (DomainError("generic rule broken"), 400),
     ],
 )
