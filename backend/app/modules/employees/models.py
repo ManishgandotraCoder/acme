@@ -53,6 +53,8 @@ class Employee(Base):
         Index("ix_employees_country_full_name_id", "country", "full_name", "id"),
         Index("ix_employees_department_full_name_id", "department", "full_name", "id"),
         Index("ix_employees_job_title_full_name_id", "job_title", "full_name", "id"),
+        Index("ix_employees_job_level_full_name_id", "job_level", "full_name", "id"),
+        Index("ix_employees_currency_full_name_id", "currency", "full_name", "id"),
         # Insights: covering indexes for GROUP BY + aggregates + median. (country, salary, id)
         # also serves the directory's country filter + salary sort.
         Index("ix_employees_country_salary_id", "country", "annual_salary", "id"),

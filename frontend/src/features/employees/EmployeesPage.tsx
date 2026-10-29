@@ -4,6 +4,7 @@ import {
   Button,
   Group,
   Modal,
+  NumberInput,
   Pagination,
   Paper,
   Select,
@@ -43,12 +44,18 @@ const SORT_OPTIONS = [
   { value: 'hire_date:asc', label: 'Longest tenure' },
 ]
 
-type Filters = Pick<EmployeeQuery, 'country' | 'department' | 'job_title'>
+type Filters = Pick<EmployeeQuery, 'country' | 'department' | 'job_title' | 'job_level' | 'currency'>
+type Amount = number | string // NumberInput yields '' when cleared
+
+const toBound = (value: Amount) => (typeof value === 'number' ? value : undefined)
 
 export function EmployeesPage() {
   const [search, setSearch] = useState('')
   const [debouncedSearch] = useDebouncedValue(search, 300)
   const [filters, setFilters] = useState<Filters>({})
+  const [salaryMin, setSalaryMin] = useState<Amount>('')
+  const [salaryMax, setSalaryMax] = useState<Amount>('')
+  const [[debouncedMin, debouncedMax]] = useDebouncedValue([salaryMin, salaryMax], 300)
   const [sort, setSort] = useState(SORT_OPTIONS[0].value)
   const [page, setPage] = useState(1)
 
@@ -58,9 +65,15 @@ export function EmployeesPage() {
 
   const [sortField, order] = sort.split(':') as [EmployeeQuery['sort'], EmployeeQuery['order']]
   const meta = useMeta()
+  // Mirrors the backend rule: one currency pinned → compare local amounts, otherwise USD.
+  const rangeCurrency =
+    filters.currency ?? meta.data?.countries.find((c) => c.name === filters.country)?.currency ?? 'USD'
+  const currencies = [...new Set(meta.data?.countries.map((c) => c.currency) ?? [])].sort()
   const employees = useEmployees({
     search: debouncedSearch,
     ...filters,
+    salary_min: toBound(debouncedMin),
+    salary_max: toBound(debouncedMax),
     page,
     page_size: PAGE_SIZE,
     sort: sortField,
@@ -74,6 +87,10 @@ export function EmployeesPage() {
 
   const setFilter = (key: keyof Filters) => (value: string | null) => {
     setFilters((f) => ({ ...f, [key]: value ?? undefined }))
+    setPage(1)
+  }
+  const setBound = (set: (value: Amount) => void) => (value: Amount) => {
+    set(value)
     setPage(1)
   }
 
@@ -169,6 +186,40 @@ export function EmployeesPage() {
           value={sort}
           allowDeselect={false}
           onChange={(v) => v && setSort(v)}
+        />
+        <Select
+          placeholder="All levels"
+          aria-label="Filter by job level"
+          clearable
+          data={meta.data?.job_levels ?? []}
+          value={filters.job_level ?? null}
+          onChange={setFilter('job_level')}
+        />
+        <Select
+          placeholder="All currencies"
+          aria-label="Filter by currency"
+          clearable
+          data={currencies}
+          value={filters.currency ?? null}
+          onChange={setFilter('currency')}
+        />
+        <NumberInput
+          placeholder={`Min salary (${rangeCurrency})`}
+          aria-label={`Minimum salary (${rangeCurrency})`}
+          min={0}
+          allowDecimal={false}
+          thousandSeparator=","
+          value={salaryMin}
+          onChange={setBound(setSalaryMin)}
+        />
+        <NumberInput
+          placeholder={`Max salary (${rangeCurrency})`}
+          aria-label={`Maximum salary (${rangeCurrency})`}
+          min={0}
+          allowDecimal={false}
+          thousandSeparator=","
+          value={salaryMax}
+          onChange={setBound(setSalaryMax)}
         />
       </SimpleGrid>
 

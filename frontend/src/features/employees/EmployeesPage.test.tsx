@@ -73,6 +73,24 @@ describe('EmployeesPage', () => {
     )
   })
 
+  it('filters by level, currency and a salary range stated in that currency', async () => {
+    const { user } = renderWithProviders(<EmployeesPage />)
+    await screen.findByText('Ada Lovelace')
+    expect(screen.getByLabelText('Minimum salary (USD)')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('textbox', { name: /filter by job level/i }))
+    await user.click(screen.getByRole('option', { name: 'Senior' }))
+    await user.click(screen.getByRole('textbox', { name: /filter by currency/i }))
+    await user.click(screen.getByRole('option', { name: 'GBP' }))
+    await user.type(screen.getByLabelText('Minimum salary (GBP)'), '50000')
+
+    await waitFor(() =>
+      expect(employeesApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ job_level: 'Senior', currency: 'GBP', salary_min: 50000, page: 1 }),
+      ),
+    )
+  })
+
   it('deletes an employee after confirmation', async () => {
     const remove = vi.spyOn(employeesApi, 'remove').mockResolvedValue(undefined)
     const { user } = renderWithProviders(<EmployeesPage />)

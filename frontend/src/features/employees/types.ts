@@ -44,6 +44,11 @@ export interface EmployeeQuery {
   country?: string
   department?: string
   job_title?: string
+  job_level?: string
+  currency?: string
+  /** Inclusive bounds; local currency when a currency or country is chosen, otherwise USD. */
+  salary_min?: number
+  salary_max?: number
   page: number
   page_size: number
   sort: SortField

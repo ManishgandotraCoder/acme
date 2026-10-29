@@ -45,13 +45,24 @@ def list_employees(
     country: str | None = None,
     department: str | None = None,
     job_title: str | None = None,
+    job_level: str | None = None,
+    currency: str | None = None,
+    salary_min: Annotated[int | None, Query(ge=0)] = None,
+    salary_max: Annotated[int | None, Query(ge=0)] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
     sort: SortField = SortField.FULL_NAME,
     order: Literal["asc", "desc"] = "asc",
 ) -> Page[EmployeeOut]:
     filters = EmployeeFilter(
-        search=search, country=country, department=department, job_title=job_title
+        search=search,
+        country=country,
+        department=department,
+        job_title=job_title,
+        job_level=job_level,
+        currency=currency,
+        salary_min=salary_min,
+        salary_max=salary_max,
     )
     items, total = service.search(
         filters, page=page, page_size=page_size, sort=sort, descending=order == "desc"

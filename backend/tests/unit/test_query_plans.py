@@ -48,6 +48,14 @@ READ_PATHS = {
     "list filtered by job title": lambda s, eid: repo(s).search(
         EmployeeFilter(job_title="Recruiter")
     ),
+    "list filtered by job level": lambda s, eid: repo(s).search(EmployeeFilter(job_level="Lead")),
+    "list filtered by currency": lambda s, eid: repo(s).search(EmployeeFilter(currency="EUR")),
+    "list filtered by USD salary range": lambda s, eid: repo(s).search(
+        EmployeeFilter(salary_min=150_000, salary_max=200_000)
+    ),
+    "list filtered by country and local salary range": lambda s, eid: repo(s).search(
+        EmployeeFilter(country="India", salary_min=3_000_000)
+    ),
     "sort by salary (USD)": lambda s, eid: repo(s).search(
         EmployeeFilter(), sort=SortField.ANNUAL_SALARY, descending=True
     ),

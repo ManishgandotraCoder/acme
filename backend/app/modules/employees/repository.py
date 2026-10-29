@@ -28,6 +28,17 @@ class EmployeeFilter:
     country: str | None = None
     department: str | None = None
     job_title: str | None = None
+    job_level: str | None = None
+    currency: str | None = None
+    # Annual salary bounds, inclusive. In local currency when the filter pins one currency
+    # (a currency or a country is chosen); otherwise in USD, because raw amounts in different
+    # currencies can't be compared.
+    salary_min: int | None = None
+    salary_max: int | None = None
+
+    @property
+    def single_currency(self) -> bool:
+        return bool(self.currency or self.country)
 
 
 class EmployeeRepository:
@@ -96,6 +107,15 @@ class EmployeeRepository:
             stmt = stmt.where(Employee.department == f.department)
         if f.job_title:
             stmt = stmt.where(Employee.job_title == f.job_title)
+        if f.job_level:
+            stmt = stmt.where(Employee.job_level == f.job_level)
+        if f.currency:
+            stmt = stmt.where(Employee.currency == f.currency)
+        salary = Employee.annual_salary if f.single_currency else Employee.annual_salary_usd
+        if f.salary_min is not None:
+            stmt = stmt.where(salary >= f.salary_min)
+        if f.salary_max is not None:
+            stmt = stmt.where(salary <= f.salary_max)
         return stmt
 
     @staticmethod
