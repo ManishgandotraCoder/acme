@@ -28,6 +28,14 @@ describe('EmployeesPage', () => {
     expect(screen.getByText('10,000 employees')).toBeInTheDocument()
   })
 
+  it('shows skeleton rows while employees load', async () => {
+    vi.spyOn(employeesApi, 'list').mockReturnValue(new Promise(() => {}))
+    renderWithProviders(<EmployeesPage />)
+
+    expect(await screen.findByText('Loading employees…')).toBeInTheDocument()
+    expect(screen.queryByText('No employees match these filters.')).not.toBeInTheDocument()
+  })
+
   it('searches by name after the user stops typing', async () => {
     const { user } = renderWithProviders(<EmployeesPage />)
     await screen.findByText('Ada Lovelace')

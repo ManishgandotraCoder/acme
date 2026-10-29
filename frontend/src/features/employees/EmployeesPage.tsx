@@ -19,6 +19,7 @@ import { notifications } from '@mantine/notifications'
 import { IconHistory, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
 import { useState } from 'react'
 import { formatDate, formatMoney, formatNumber } from '@/shared/lib/format'
+import { LoadingStatus, RefreshBar, SkeletonRows } from '@/shared/ui/loading'
 import { EmployeeForm } from './components/EmployeeForm'
 import { SalaryHistoryDrawer } from './components/SalaryHistoryDrawer'
 import {
@@ -108,7 +109,7 @@ export function EmployeesPage() {
         <div>
           <Title order={2}>Employees</Title>
           <Text c="dimmed" size="sm">
-            {formatNumber(total)} employees
+            {employees.isPending ? 'Loading…' : `${formatNumber(total)} employees`}
           </Text>
         </div>
         <Button leftSection={<IconPlus size={16} />} onClick={() => setEditing('new')} disabled={!meta.data}>
@@ -164,7 +165,9 @@ export function EmployeesPage() {
 
       {employees.error && <Alert color="red">{employees.error.message}</Alert>}
 
-      <Paper withBorder>
+      <Paper withBorder style={{ overflow: 'hidden' }}>
+        <RefreshBar active={employees.isFetching && !employees.isPending} />
+        {employees.isPending && <LoadingStatus label="Loading employees…" />}
         <Table.ScrollContainer minWidth={800}>
           <Table striped highlightOnHover verticalSpacing="xs">
             <Table.Thead>
@@ -178,7 +181,8 @@ export function EmployeesPage() {
                 <Table.Th w={110} />
               </Table.Tr>
             </Table.Thead>
-            <Table.Tbody>
+            <Table.Tbody style={{ opacity: employees.isPlaceholderData ? 0.6 : 1, transition: 'opacity 150ms' }}>
+              {employees.isPending && <SkeletonRows rows={10} columns={7} />}
               {employees.data?.items.map((e) => (
                 <Table.Tr key={e.id}>
                   <Table.Td>

@@ -26,6 +26,17 @@ describe('AskPage', () => {
     expect(screen.getByText('Job title: Data Analyst')).toBeInTheDocument()
   })
 
+  it('shows a thinking state with the question while the model works', async () => {
+    vi.spyOn(assistantApi, 'ask').mockReturnValue(new Promise(() => {}))
+    const { user } = renderWithProviders(<AskPage />)
+
+    await user.type(screen.getByLabelText(/your question/i), 'Average pay in India?')
+    await user.click(screen.getByRole('button', { name: /^ask$/i }))
+
+    expect(await screen.findByText('Thinking…')).toBeInTheDocument()
+    expect(screen.getByText('Average pay in India?', { selector: 'p' })).toBeInTheDocument()
+  })
+
   it('lets the user ask an example question with one click', async () => {
     const ask = vi.spyOn(assistantApi, 'ask').mockResolvedValue(result)
     const { user } = renderWithProviders(<AskPage />)

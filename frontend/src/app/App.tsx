@@ -1,7 +1,8 @@
-import { AppShell, Burger, Group, Loader, NavLink, Title } from '@mantine/core'
+import { AppShell, Burger, Group, NavLink, Title } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChartBar, IconSparkles, IconUsers } from '@tabler/icons-react'
 import { lazy, Suspense } from 'react'
+import { PageSkeleton } from '@/shared/ui/loading'
 import { NavLink as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 // Route-level code splitting: the charting library is only downloaded for Pay insights.
@@ -45,7 +46,7 @@ export function App() {
         ))}
       </AppShell.Navbar>
       <AppShell.Main>
-        <Suspense fallback={<Loader m="xl" />}>
+        <Suspense fallback={<PageSkeleton />}>
           <Routes>
             <Route path="/" element={<Navigate to="/employees" replace />} />
             <Route path="/employees" element={<EmployeesPage />} />

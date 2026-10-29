@@ -3,6 +3,7 @@ import { Alert, Group, Paper, Select, SimpleGrid, Skeleton, Stack, Table, Text, 
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { formatMoney, formatNumber } from '@/shared/lib/format'
+import { LoadingStatus, SkeletonRows } from '@/shared/ui/loading'
 import { insightsApi } from '@/features/insights/api'
 
 export function InsightsPage() {
@@ -16,7 +17,7 @@ export function InsightsPage() {
         <Title order={2}>Pay insights</Title>
         <Text c="dimmed" size="sm">
           Salaries are stored in local currency. Cross-country figures are converted to USD at static
-          FX rates as of {summary.data?.fx_rates_as_of ?? '…'}.
+          FX rates{summary.data ? ` as of ${summary.data.fx_rates_as_of}.` : '…'}
         </Text>
       </div>
       {error && <Alert color="red">{error.message}</Alert>}
@@ -29,6 +30,17 @@ export function InsightsPage() {
       </SimpleGrid>
 
       <Section title="Pay by country">
+        {countries.isPending && (
+          <Stack gap={10} mb="md">
+            <LoadingStatus label="Loading pay by country…" />
+            {['88%', '74%', '66%', '58%', '47%', '35%'].map((w) => (
+              <Group key={w} gap="sm" wrap="nowrap">
+                <Skeleton h={12} w={96} />
+                <Skeleton h={20} w={w} />
+              </Group>
+            ))}
+          </Stack>
+        )}
         {countries.data && (
           <BarChart
             h={Math.max(160, countries.data.length * 34)}
@@ -36,10 +48,11 @@ export function InsightsPage() {
             dataKey="country"
             orientation="vertical"
             yAxisProps={{ width: 110 }}
-            series={[{ name: 'average_salary_usd', label: 'Average salary (USD)', color: 'indigo.6' }]}
+            series={[{ name: 'average_salary_usd', label: 'Average salary (USD)', color: 'mauve.6' }]}
             valueFormatter={(v) => formatMoney(v, 'USD')}
             gridAxis="x"
             barProps={{ radius: [0, 4, 4, 0] }}
+            maxBarWidth={18}
             mb="md"
           />
         )}
@@ -57,6 +70,7 @@ export function InsightsPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
+              {countries.isPending && <SkeletonRows rows={5} columns={7} />}
               {countries.data?.map((c) => (
                 <Table.Tr key={c.country}>
                   <Table.Td>{c.country}</Table.Td>
@@ -110,6 +124,7 @@ function JobTitlesSection({ countries }: { countries: string[] }) {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
+            {(stats.isPending || stats.isFetching) && !stats.data && <SkeletonRows rows={6} columns={5} />}
             {stats.data?.map((s) => (
               <Table.Tr key={s.job_title}>
                 <Table.Td>{s.job_title}</Table.Td>
@@ -159,6 +174,7 @@ function DepartmentsSection({ countries }: { countries: string[] }) {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
+          {stats.isPending && <SkeletonRows rows={6} columns={4} />}
           {stats.data?.map((d) => (
             <Table.Tr key={d.department}>
               <Table.Td>{d.department}</Table.Td>

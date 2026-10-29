@@ -33,6 +33,13 @@ describe('InsightsPage', () => {
     ])
   })
 
+  it('shows placeholders while insights load', async () => {
+    vi.spyOn(insightsApi, 'countries').mockReturnValue(new Promise(() => {}))
+    renderWithProviders(<InsightsPage />)
+
+    expect(await screen.findByText('Loading pay by country…')).toBeInTheDocument()
+  })
+
   it('shows org-wide headline numbers with the FX date', async () => {
     renderWithProviders(<InsightsPage />)
 

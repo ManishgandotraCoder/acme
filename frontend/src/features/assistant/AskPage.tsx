@@ -1,7 +1,8 @@
-import { Alert, Badge, Button, Group, Paper, Stack, Text, Textarea, Title } from '@mantine/core'
+import { Alert, Badge, Button, Group, Paper, Skeleton, Stack, Text, Textarea, Title } from '@mantine/core'
 import { IconSparkles } from '@tabler/icons-react'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
+import { WorkingIndicator } from '@/shared/ui/loading'
 import { assistantApi } from '@/features/assistant/api'
 import type { AskResult } from '@/features/assistant/types'
 
@@ -87,6 +88,17 @@ export function AskPage() {
         <Alert color="orange" title="Couldn't get an answer">
           {ask.error.message} The Pay insights page still works without the AI assistant.
         </Alert>
+      )}
+
+      {ask.isPending && (
+        <Paper withBorder p="md" aria-busy>
+          <Text size="sm" c="dimmed" mb="xs">
+            {ask.variables}
+          </Text>
+          <WorkingIndicator label="Thinking…" />
+          <Skeleton h={12} w="85%" mt="md" />
+          <Skeleton h={12} w="60%" mt={8} />
+        </Paper>
       )}
 
       {answers.map((a, i) => (

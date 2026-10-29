@@ -1,10 +1,10 @@
-import { MantineProvider, createTheme } from '@mantine/core'
+import { MantineProvider } from '@mantine/core'
 import { Notifications } from '@mantine/notifications'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { BrowserRouter } from 'react-router-dom'
+import { theme } from './theme'
 
-const theme = createTheme({ primaryColor: 'indigo', defaultRadius: 'md' })
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
