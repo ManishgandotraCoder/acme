@@ -12,6 +12,11 @@ SPA fallback, `/api/*` 404s preserved). Container start: migrate → seed if emp
 The database is PostgreSQL ([ADR 0007](0007-postgresql.md)), supplied via
 `SALARY_DATABASE_URL`; `docker-compose.yml` runs Postgres and Ollama alongside the app. Health: `/api/health` (liveness), `/api/ready` (DB).
 
+Hosted on Render from `render.yaml` (web service from the Dockerfile + managed Postgres).
+Hosts hand out driver-less `postgres://` URLs; settings rewrite them to psycopg. The health
+check is liveness, so a database blip doesn't restart the app. Ollama is not hosted, so
+`/api/ask` returns 503 and the UI says so ([ADR 0003](0003-llm-classifies-intent-only.md)).
+
 ## Consequences
 - ✅ One artifact, one URL, UI and API always in step.
 - ❌ UI and API scale together; put static assets behind a CDN if traffic ever demands it.

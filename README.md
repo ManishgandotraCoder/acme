@@ -15,6 +15,7 @@ Vitest + Testing Library · Docker · GitHub Actions
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Trade-off table and measured performance |
 | [docs/AI_USAGE.md](docs/AI_USAGE.md) | How AI was used to build this, and where it was wrong |
 | [CLAUDE.md](CLAUDE.md) | Standing instructions given to the AI coding agent |
+| [docs/DEMO.md](docs/DEMO.md) | Shot list for the video demo |
 | [docs/ASSIGNMENT.md](docs/ASSIGNMENT.md) | Original brief |
 
 ## What the HR manager can do
@@ -45,6 +46,12 @@ and the chat explains that the assistant is unavailable.
 **Docker (everything: app, PostgreSQL, Ollama):** `make docker-up` → http://localhost:8000.
 The container runs migrations, seeds on first boot only, then serves the UI and the API.
 
+**Deploy (Render):** Dashboard → *New* → *Blueprint* → pick this repo. [render.yaml](render.yaml)
+provisions PostgreSQL 17 and a web service from the Dockerfile, and wires the database URL in.
+The first boot migrates and seeds 10,000 employees. Ollama isn't hosted, so the pay assistant
+reports itself unavailable there while everything else works. A demo script is in
+[docs/DEMO.md](docs/DEMO.md).
+
 Run `make help` for all tasks. Configuration: `SALARY_*` env vars, see
 [backend/.env.example](backend/.env.example).
 
@@ -56,7 +63,7 @@ make check        # what CI runs: lint + types + all tests
 
 | | Backend | Frontend |
 |---|---|---|
-| Tests | 143 in ~3 s (on PostgreSQL) | 45 in ~4 s |
+| Tests | 150 in ~6 s (on PostgreSQL) | 45 in ~4 s |
 | Static checks | ruff (lint + format) | ESLint, `tsc --strict` |
 
 - **Real database, still fast:** tests run on PostgreSQL (a throwaway container), each test in a
