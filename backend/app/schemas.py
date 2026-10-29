@@ -120,3 +120,14 @@ class DepartmentStats(BaseModel):
     headcount: int
     total_payroll_usd: int
     average_salary_usd: int
+
+
+class CountryOption(BaseModel):
+    name: str
+    currency: str
+
+
+class Meta(BaseModel):
+    countries: list[CountryOption]
+    departments: list[str]
+    job_titles: list[str]

@@ -23,6 +23,11 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = [
+    "error",
+    # Upstream: Starlette TestClient nudges towards httpx2; we keep httpx for the Ollama client.
+    "ignore:Using `httpx` with `starlette.testclient`",
+]
 
 [tool.ruff]
 line-length = 100
