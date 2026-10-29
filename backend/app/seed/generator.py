@@ -79,6 +79,9 @@ DEPARTMENT_WEIGHTS = {
 
 # Share of the workforce at each level (a pyramid), in JOB_LEVELS order.
 LEVEL_WEIGHTS = (0.20, 0.35, 0.25, 0.15, 0.05)
+# A few people are paid far off their band (legacy contracts, retention deals, mis-levelling):
+# real data has outliers, and the outlier analytics need some to find.
+OFF_BAND_RATE = 0.01
 
 HIRE_DATE_START = date(2010, 1, 1)
 HIRE_DATE_END = date(2026, 9, 30)  # fixed so output is reproducible
@@ -118,7 +121,10 @@ def generate_employees(
         job_title, (low, high) = rng.choice(list(ROLES[department].items()))
         level = rng.choices(JOB_LEVELS, LEVEL_WEIGHTS)[0]
 
-        salary = _local_salary(_band_position(low, high, level, rng), country)
+        us_usd = _band_position(low, high, level, rng)
+        if rng.random() < OFF_BAND_RATE:
+            us_usd *= rng.uniform(1.4, 1.8) if rng.random() < 0.5 else rng.uniform(0.5, 0.65)
+        salary = _local_salary(us_usd, country)
         rows.append(
             {
                 "full_name": f"{first} {last}",
@@ -139,10 +145,12 @@ def generate_employees(
 
 
 def _band_position(low: int, high: int, level: str, rng: random.Random) -> float:
-    """Each level owns an overlapping slice of the band; Principal sits at the top."""
-    slice_start = level_rank(level) / len(JOB_LEVELS)
-    position = slice_start + rng.uniform(0, 1.6 / len(JOB_LEVELS))
-    return low + (high - low) * min(position, 1.0)
+    """Each level owns an evenly spaced, overlapping slice of the band; Principal's slice ends
+    exactly at the top, so no level is squashed against the maximum."""
+    slice_width = 0.36
+    step = (1 - slice_width) / (len(JOB_LEVELS) - 1)
+    position = level_rank(level) * step + rng.uniform(0, slice_width)
+    return low + (high - low) * position
 
 
 def _local_salary(us_usd: float, country: str) -> int:

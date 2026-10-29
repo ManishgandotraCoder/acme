@@ -1,4 +1,5 @@
 import random
+import statistics
 from datetime import date
 
 from sqlalchemy import func, select
@@ -48,19 +49,35 @@ def test_every_employee_has_a_job_level_and_all_levels_occur():
     assert {r["job_level"] for r in rows} == set(JOB_LEVELS)
 
 
-def test_higher_levels_are_paid_more_within_the_same_role_and_country():
+def test_each_level_is_paid_clearly_more_than_the_one_below_within_a_role():
     rows = [
         r
-        for r in _generate(3000)
+        for r in _generate(20_000)
         if (r["job_title"], r["country"]) == ("Software Engineer", "United States")
     ]
     by_level: dict[str, list[int]] = {}
     for r in rows:
         by_level.setdefault(r["job_level"], []).append(r["annual_salary"])
-    averages = [
-        sum(v) / len(v) for _, v in sorted(by_level.items(), key=lambda kv: level_rank(kv[0]))
+    medians = [statistics.median(by_level[level]) for level in sorted(by_level, key=level_rank)]
+    for lower, higher in zip(medians, medians[1:], strict=False):
+        assert higher > lower * 1.03
+
+
+def test_a_small_share_of_employees_are_paid_far_from_their_peers():
+    rows = _generate(4000)
+    peers: dict[tuple, list[int]] = {}
+    for r in rows:
+        peers.setdefault((r["job_title"], r["job_level"], r["country"]), []).append(
+            r["annual_salary"]
+        )
+    medians = {key: statistics.median(v) for key, v in peers.items() if len(v) >= 5}
+    far = [
+        r
+        for r in rows
+        if (key := (r["job_title"], r["job_level"], r["country"])) in medians
+        and abs(r["annual_salary"] / medians[key] - 1) >= 0.3
     ]
-    assert averages == sorted(averages)
+    assert 0.003 * len(rows) <= len(far) <= 0.03 * len(rows)
 
 
 def test_name_files_ship_with_enough_names_for_variety():
