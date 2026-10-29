@@ -13,18 +13,18 @@ is the quick overview.
 | 4 | **Salary sort ranks by USD equivalent** (stored, indexed `annual_salary_usd`; [ADR 0006](adr/0006-indexing.md)) | "Highest paid" must compare like with like (bug found in smoke test: JPY salaries sorted first) | Derived column must be recomputed if FX rates change |
 | 5 | **Changing to a different-currency country requires a new salary** | Otherwise 2,400,000 INR silently becomes 2,400,000 EUR | One extra field for HR in a rare flow |
 | 6 | **Salary history as an append-only table**, written by the service | Audit trail is the #1 reason to leave spreadsheets | Only salary/currency changes are audited, not every field |
-| 7 | **Integer salaries (whole units)** | Annual salaries are never fractional; avoids float/Decimal issues in SQLite aggregates | Can't represent cents (not needed) |
+| 7 | **Integer salaries (whole units)** | Annual salaries are never fractional; avoids float rounding in aggregates (Postgres `AVG` returns `Decimal`, converted once at the service boundary) | Can't represent cents (not needed) |
 | 8 | **LLM classifies intent only; answers are templated from SQL results** | A hallucinated pay figure is worse than no answer; no text-to-SQL means no injection surface | Can only answer the 4 supported question shapes (+ variations); unsupported questions get a helpful hint |
 | 9 | **Verify the LLM's entities against the question text** | Found empirically: llama3.2 drops entities and invents filters (see AI_USAGE.md) | Synonyms the model maps ("devs" → Software Engineer) are dropped unless grounded |
-| 10 | **SQLite** | Zero-ops, file-based, ample for 10k rows; requirement allowed it | Single writer; Postgres is a `DATABASE_URL` change (repository layer has no SQLite-specific code besides pragmas) |
+| 10 | **PostgreSQL** ([ADR 0007](adr/0007-postgresql.md); replaced SQLite) | Concurrent writers, `pg_trgm` search, `percentile_cont` median; tests run on the production database | Needs Docker locally; a network hop per query (still single-digit ms) |
 | 11 | **Modular monolith** (core / shared / modules), boundaries enforced by tests ([ADR 0001](adr/0001-modular-monolith.md)) | A feature lives in one folder; coupling is a reviewed decision; extractable later | More structure than a single-file app; microservices rejected as overkill |
 | 12 | **App factory with injected LLM** | Tests are hermetic and fast; Ollama outages degrade one feature, not the app | — |
 | 13 | **Single deployable container** (API serves built UI) | Simplest possible deployment & no CORS in prod | UI and API scale together (fine for an internal HR tool) |
 | 14 | **Mantine** component library | Accessible, complete (tables, forms, charts, notifications), little CSS to write | Larger bundle — mitigated by route-level code splitting |
 | 16 | **Domain error categories** (NotFound / Conflict / BusinessRule / ServiceUnavailable) mapped to HTTP once | Services stay HTTP-free; new errors need no infrastructure change | — |
-| 17 | **Alembic migrations + drift test** ([ADR 0004](adr/0004-sqlite-with-alembic.md)) | Schema can evolve with data in place; models can't silently diverge | One extra step on deploy (automated in the container) |
+| 17 | **Alembic migrations + drift test** ([ADR 0004](adr/0004-sqlite-with-alembic.md), [0007](adr/0007-postgresql.md)) | Schema can evolve with data in place; models can't silently diverge | One extra step on deploy (automated in the container) |
 | 18 | **Request IDs + access logs, liveness/readiness endpoints** | Minimum needed to debug production and run behind a load balancer | — |
-| 19 | **Index every read path** + query-plan tests ([ADR 0006](adr/0006-indexing.md)) | 4–40× faster reads at 200k rows; regressions caught in CI | Slower bulk writes (10k seed 0.12 s → 0.81 s) |
+| 19 | **Index every read path** + query-plan tests ([ADR 0006](adr/0006-indexing.md)) | 4–40× faster reads at 200k rows; regressions caught in CI | Slower bulk writes (10k seed 1.2 s on Postgres) |
 | 15 | **Offset pagination** (page/page_size ≤ 100) | Users jump to page N; data set is small | Deep offsets would be slow at millions of rows (keyset pagination then) |
 
 ## Deliberately not built
@@ -33,11 +33,12 @@ live FX, payroll/tax, Excel import, multi-tenancy.
 
 ## Performance
 
-Measured on a laptop (Apple Silicon) with 10,000 seeded employees, warm process:
+Measured on a laptop (Apple Silicon). Original SQLite measurements with 10,000 employees are
+below; PostgreSQL measurements at 200,000 employees are in [ADR 0006](adr/0006-indexing.md).
 
 | Operation | Time | Target |
 |---|---|---|
-| Seed 10,000 employees (bulk Core insert, one transaction, 10 indexes + FTS) | **0.81 s** | < 5 s |
+| Seed 10,000 employees (bulk insert, one transaction, 13 indexes, PostgreSQL) | **1.2 s** | < 5 s |
 | `GET /api/employees` page 1 | 1.8 ms | < 200 ms |
 | Search + filter + salary sort | 3.9 ms | < 200 ms |
 | `GET /api/insights/summary` | 2.0 ms | < 200 ms |
@@ -49,7 +50,8 @@ How:
 - Indexes on every filter/sort column, composite `(country, job_title)`.
 - Aggregates (`COUNT/MIN/MAX/AVG/SUM`) computed in SQL, not by loading rows.
 - Median needs ordered values: one ordered scan of `(country, salary)` — 10k integers.
-- SQLite WAL mode for concurrent reads during writes.
+- PostgreSQL: index-only scans for counts/aggregates, `percentile_cont` median in SQL,
+  `pg_trgm` GIN indexes for search ([ADR 0006](adr/0006-indexing.md)).
 - Frontend: `keepPreviousData` keeps the table steady while paging; search is debounced
   (300 ms); routes are code-split.
 

@@ -47,10 +47,11 @@ without exporting to Excel.
 | Bulk Excel import/export | Valuable next step for migration; the seed script proves bulk ingest. Deferred to keep core quality high. |
 | LLM generating SQL or answer numbers | Hallucinated pay figures are worse than no answer. Intent → whitelisted query only. |
 | Multi-tenant, org charts, performance reviews | Out of the stated problem. |
-| Postgres / caching layer | SQLite with indexes answers aggregations over 10k rows in milliseconds; repository layer keeps Postgres a config change. |
+| Caching layer | PostgreSQL with targeted indexes answers every list and insight query in milliseconds even at 20× today's data (ADR 0006); a cache would add invalidation complexity for no gain. |
 
 ## Non-functional requirements
 - List & insight endpoints respond in < 200 ms on 10k employees (indexed columns, SQL aggregates).
 - Seeding 10k employees in < 5 s (bulk inserts, single transaction).
-- Unit tests fast (< 10 s total) and deterministic (seeded RNG, fake LLM, in-memory DB).
+- Unit tests fast (< 10 s total) and deterministic (seeded RNG, fake LLM, each test in a
+  rolled-back PostgreSQL transaction).
 - Validation errors return clear, field-level messages (HTTP 422); not-found → 404; conflicts → 409.

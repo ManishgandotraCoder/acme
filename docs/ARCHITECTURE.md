@@ -13,7 +13,7 @@ flowchart LR
         API[FastAPI on uvicorn]
         UI -->|JSON /api| API
     end
-    API --> DB[(SQLite<br/>Alembic-managed)]
+    API --> DB[(PostgreSQL 17<br/>Alembic-managed)]
     API -->|classify question| OL[Ollama · llama3.2]
 ```
 
@@ -49,7 +49,7 @@ backend/
 │   ├── main.py                 composition root: wires settings, infra, routers
 │   ├── core/                   infrastructure, no business logic
 │   │   ├── config.py           typed settings (SALARY_* env vars)
-│   │   ├── database.py         engine, sessions, Base (SQLite pragmas)
+│   │   ├── database.py         engine, sessions, Base, required extensions (pg_trgm)
 │   │   ├── dependencies.py     SessionDep
 │   │   ├── errors.py           DomainError → NotFound / Conflict / BusinessRule / ServiceUnavailable
 │   │   ├── http_errors.py      category → HTTP status, in one place
@@ -63,7 +63,7 @@ backend/
 │   │   ├── insights/           read-only pay analytics
 │   │   └── assistant/          plain-English questions (ADR 0003)
 │   └── seed/                   deterministic 10k generator + CLI
-├── migrations/                 Alembic (ADR 0004)
+├── migrations/                 Alembic, one PostgreSQL baseline (ADR 0007)
 └── tests/
     ├── unit/<module>/          services, repository, schemas, resolver, seed
     ├── unit/core/              error mapping, migration drift
@@ -124,9 +124,8 @@ erDiagram
     }
 ```
 Every read path is index-backed ([ADR 0006](adr/0006-indexing.md)): composite indexes for
-filtered lists, covering indexes for insights, an indexed stored `annual_salary_usd` for
-cross-currency sorting, and an FTS5 trigram index (`employees_search`, synced by triggers)
-for substring search. `tests/unit/test_query_plans.py` fails if any query falls back to a
+filtered lists (ending in `id`, the paging tie-breaker), covering indexes for insights, an indexed stored `annual_salary_usd` for
+cross-currency sorting, and `pg_trgm` GIN indexes for substring search. `tests/unit/test_query_plans.py` fails if any query falls back to a
 full scan or in-memory sort. The schema is owned by Alembic; a test fails if models and
 migrations drift.
 

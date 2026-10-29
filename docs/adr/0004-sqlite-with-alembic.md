@@ -1,6 +1,6 @@
 # 0004 — SQLite with Alembic migrations, Postgres-ready
 
-**Status:** Accepted
+**Status:** Superseded by [0007](0007-postgresql.md). Alembic and the drift test remain.
 
 ## Context
 10k employees, few concurrent writers, a brief that suggests SQLite, and a need for

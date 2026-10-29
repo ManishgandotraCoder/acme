@@ -3,7 +3,7 @@
 Web application for ACME's HR Manager to manage salary data for 10,000 employees across
 10 countries and answer "how do we pay people?" questions, replacing spreadsheets.
 
-**Stack:** Python 3.12 · FastAPI on uvicorn · SQLAlchemy 2 + SQLite + Alembic ·
+**Stack:** Python 3.12 · FastAPI on uvicorn · SQLAlchemy 2 + PostgreSQL 17 + Alembic ·
 React 19 + TypeScript · Mantine · TanStack Query · Ollama (local LLM) · pytest ·
 Vitest + Testing Library · Docker · GitHub Actions
 
@@ -42,7 +42,7 @@ Prerequisites: Python 3.12 + [uv](https://docs.astral.sh/uv/), Node 22. For the 
 [Ollama](https://ollama.com) with `ollama pull llama3.2`. Without it everything else works,
 and the chat explains that the assistant is unavailable.
 
-**Docker (everything, including Ollama):** `make docker-up` → http://localhost:8000.
+**Docker (everything: app, PostgreSQL, Ollama):** `make docker-up` → http://localhost:8000.
 The container runs migrations, seeds on first boot only, then serves the UI and the API.
 
 Run `make help` for all tasks. Configuration: `SALARY_*` env vars, see
@@ -56,10 +56,11 @@ make check        # what CI runs: lint + types + all tests
 
 | | Backend | Frontend |
 |---|---|---|
-| Tests | 143 in ~1 s | 44 in ~4 s |
+| Tests | 143 in ~3 s (on PostgreSQL) | 45 in ~4 s |
 | Static checks | ruff (lint + format) | ESLint, `tsc --strict` |
 
-- **Deterministic:** in-memory SQLite per test, seeded RNG, fake LLM, mocked HTTP. No network.
+- **Real database, still fast:** tests run on PostgreSQL (a throwaway container), each test in a
+  rolled-back transaction; seeded RNG, fake LLM, mocked HTTP.
 - **Architecture tests** enforce module boundaries ([ADR 0001](docs/adr/0001-modular-monolith.md)).
 - **Migration drift test:** models and Alembic migrations can't diverge.
 - **Query-plan tests:** every read path must use an index, with no full scans or in-memory

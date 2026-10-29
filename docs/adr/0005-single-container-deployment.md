@@ -9,7 +9,8 @@ and version skew between UI and API.
 ## Decision
 A multi-stage Dockerfile builds the React app and serves it from FastAPI (`core/frontend.py`,
 SPA fallback, `/api/*` 404s preserved). Container start: migrate → seed if empty → serve.
-`docker-compose.yml` adds Ollama. Health: `/api/health` (liveness), `/api/ready` (DB).
+The database is PostgreSQL ([ADR 0007](0007-postgresql.md)), supplied via
+`SALARY_DATABASE_URL`; `docker-compose.yml` runs Postgres and Ollama alongside the app. Health: `/api/health` (liveness), `/api/ready` (DB).
 
 ## Consequences
 - ✅ One artifact, one URL, UI and API always in step.

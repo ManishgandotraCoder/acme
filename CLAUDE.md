@@ -23,12 +23,12 @@ lessons learned while building it — see docs/AI_USAGE.md.
   ServiceUnavailable); never raise `HTTPException` outside routers.
 - Services own the transaction (`commit`); repositories only build queries.
 - New or changed queries must be index-backed: add the read path to
-  `tests/unit/test_query_plans.py` (fails on table scans / in-memory sorts). See ADR 0006.
+  `tests/unit/test_query_plans.py` (fails on table scans / sorts). List indexes end in
+  `(sort column, id)` because the repository breaks ties by id. See ADR 0006.
 - `annual_salary_usd` is derived. Never set it by hand in ORM code (model events do it);
   bulk Core inserts must set it. Emails are stored lower-case.
 - Schema changes require an Alembic migration: `make migration m="..."`.
-  `tests/unit/core/test_migrations.py` fails on model/migration drift. A *batch* operation
-  on `employees` drops the full-text search triggers; re-create them in the same migration.
+  `tests/unit/core/test_migrations.py` fails on model/migration drift.
 - Frontend: `features/<name>` owns `api.ts`, `types.ts` (mirrors backend schemas), hooks,
   components. Shared code lives in `shared/`. Import across folders with `@/`.
 
@@ -45,6 +45,8 @@ lessons learned while building it — see docs/AI_USAGE.md.
   (`app/modules/assistant/intent.py`). Add a regression test for every new failure mode.
 
 ## Tests
-- Fast and deterministic: in-memory SQLite, seeded RNG, fake LLM, mocked HTTP. No network.
+- Tests run on real PostgreSQL (throwaway container, or `SALARY_TEST_DATABASE_URL`), each in a
+  rolled-back transaction. Never hard-code ids: rollbacks don't rewind sequences.
+- Deterministic otherwise: seeded RNG, fake LLM, mocked HTTP.
 - Warnings are errors in the backend suite.
 - Name tests as behaviours (`test_moving_to_a_different_currency_requires_a_new_salary`).
