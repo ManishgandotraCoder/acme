@@ -1,9 +1,12 @@
 from collections.abc import Iterator
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.dependencies import get_session
 from app.main import create_app
 
 
@@ -23,9 +26,20 @@ def llm() -> StubLLM:
 
 
 @pytest.fixture
-def client(llm) -> Iterator[TestClient]:
-    app = create_app(Settings(database_url="sqlite://", auto_create_schema=True), llm=llm)
-    with TestClient(app) as c:
+def make_client(postgres_url: str, session: Session, llm: StubLLM):
+    """Build a TestClient whose requests share the test's rolled-back transaction."""
+
+    def _make(**settings) -> TestClient:
+        app: FastAPI = create_app(Settings(database_url=postgres_url, **settings), llm=llm)
+        app.dependency_overrides[get_session] = lambda: session
+        return TestClient(app)
+
+    return _make
+
+
+@pytest.fixture
+def client(make_client) -> Iterator[TestClient]:
+    with make_client() as c:
         yield c
 
 

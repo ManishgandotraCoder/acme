@@ -1,20 +1,39 @@
-# One command to run everything locally: `docker compose up --build`, then http://localhost:8000
+# Local stack. Database only (for `make dev-api`): `make db-up`.
+# Everything: `docker compose up --build`, then http://localhost:8000
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: salary
+      POSTGRES_PASSWORD: salary
+      POSTGRES_DB: salary
+    ports: ["5433:5432"]  # 5433 avoids clashing with a locally installed Postgres
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salary -d salary"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   app:
     build: .
     ports: ["8000:8000"]
     environment:
+      SALARY_DATABASE_URL: postgresql+psycopg://salary:salary@postgres:5432/salary
       SALARY_OLLAMA_URL: http://ollama:11434
       SALARY_OLLAMA_MODEL: llama3.2
-    volumes: ["salary-data:/data"]
-    depends_on: [ollama]
+    depends_on:
+      postgres: { condition: service_healthy }
+      ollama: { condition: service_started }
+    profiles: [app]
 
   ollama:
     image: ollama/ollama:0.12.3
     volumes: ["ollama-models:/root/.ollama"]
     # Pull the model once on start-up (the app works without it; Ask AI returns 503 until ready).
     entrypoint: ["sh", "-c", "ollama serve & sleep 3 && ollama pull llama3.2 && wait"]
+    profiles: [app]
 
 volumes:
-  salary-data:
+  postgres-data:
   ollama-models:

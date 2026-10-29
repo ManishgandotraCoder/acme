@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from sqlalchemy import ColumnElement, Select, func, or_, select, text
+from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.modules.employees import search_index
 from app.modules.employees.models import Employee
 
 
@@ -99,15 +98,11 @@ class EmployeeRepository:
             stmt = stmt.where(Employee.job_title == f.job_title)
         return stmt
 
-    def _search_condition(self, term: str) -> ColumnElement[bool]:
-        uses_index = (
-            self._session.get_bind().dialect.name == "sqlite"
-            and len(term) >= search_index.MIN_TERM_LENGTH
+    @staticmethod
+    def _search_condition(term: str) -> ColumnElement[bool]:
+        # Case-insensitive substring match, served by the trigram GIN indexes (terms of 3+
+        # characters). autoescape: '%' and '_' typed by the user are matched literally.
+        return or_(
+            Employee.full_name.icontains(term, autoescape=True),
+            Employee.email.icontains(term, autoescape=True),
         )
-        if uses_index:
-            matches = text(
-                f"SELECT rowid FROM {search_index.TABLE} WHERE {search_index.TABLE} MATCH :term"
-            ).bindparams(term=search_index.match_expression(term))
-            return Employee.id.in_(matches)
-        pattern = f"%{term}%"
-        return or_(Employee.full_name.ilike(pattern), Employee.email.ilike(pattern))

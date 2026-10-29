@@ -1,47 +1,25 @@
 from collections.abc import Iterator
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import DDL, Engine, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 
 class Base(DeclarativeBase):
     pass
 
 
-SEARCH_TABLE_SUFFIX = "_search"
-
-
-def search_table_name(table: str) -> str:
-    """Naming convention for full-text search tables owned by raw DDL, not the ORM."""
-    return f"{table}{SEARCH_TABLE_SUFFIX}"
-
-
-def is_search_table(name: str) -> bool:
-    """Search tables (and FTS5's shadow tables, e.g. employees_search_data) live outside
-    ``Base.metadata``; migration autogenerate and drift checks must ignore them."""
-    return SEARCH_TABLE_SUFFIX in name
+# Extensions the schema relies on (pg_trgm: indexed substring search). Created before any
+# table by create_all (tests/dev); the initial Alembic migration does the same in production.
+REQUIRED_EXTENSIONS = ("pg_trgm",)
+for _extension in REQUIRED_EXTENSIONS:
+    event.listen(
+        Base.metadata, "before_create", DDL(f"CREATE EXTENSION IF NOT EXISTS {_extension}")
+    )
 
 
 def make_engine(database_url: str) -> Engine:
-    kwargs: dict = {}
-    if database_url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
-        if database_url in ("sqlite://", "sqlite:///:memory:"):
-            # Share one in-memory DB across connections (tests).
-            kwargs["poolclass"] = StaticPool
-    engine = create_engine(database_url, **kwargs)
-
-    if database_url.startswith("sqlite"):
-
-        @event.listens_for(engine, "connect")
-        def _sqlite_pragmas(dbapi_conn, _record):  # pragma: no cover - trivial
-            cursor = dbapi_conn.cursor()
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.close()
-
-    return engine
+    # pool_pre_ping: transparently replace connections dropped by the server or a proxy.
+    return create_engine(database_url, pool_pre_ping=True)
 
 
 def make_session_factory(engine: Engine) -> sessionmaker[Session]:

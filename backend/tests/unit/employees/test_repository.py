@@ -121,7 +121,7 @@ def test_salary_sort_compares_across_currencies_in_usd(session):
     assert [e.country for e in items] == ["United States", "Germany", "India"]
 
 
-# --- Full-text search index ------------------------------------------------------------
+# --- Substring search (pg_trgm) ------------------------------------------------------------
 
 
 def _names(repo, term):
@@ -136,12 +136,12 @@ def test_search_matches_substrings_case_insensitively(session):
     assert _names(repo, "iya.pa") == ["Priya Patel"]  # matches inside the email
 
 
-def test_short_terms_fall_back_to_a_scan_and_still_match(session):
+def test_short_terms_still_match(session):
     _seed(session, build_employee(full_name="Bo Li", email="bo@example.com"))
     assert _names(EmployeeRepository(session), "Li") == ["Bo Li"]
 
 
-def test_search_index_follows_renames_and_deletes(session):
+def test_search_follows_renames_and_deletes(session):
     repo = EmployeeRepository(session)
     employee = repo.add(build_employee(full_name="Grace Hopper"))
     session.commit()
@@ -156,7 +156,7 @@ def test_search_index_follows_renames_and_deletes(session):
     assert _names(repo, "brewster") == []
 
 
-@pytest.mark.parametrize("term", ['"quoted"', "a OR b", "NEAR(x y)", "x*", "-minus", "'; DROP"])
+@pytest.mark.parametrize("term", ["%", "_", "%a%", "a_a", "'; DROP", '"quoted"', "x*"])
 def test_search_input_is_never_interpreted_as_query_syntax(session, term):
     _seed(session, build_employee())
     assert EmployeeRepository(session).search(EmployeeFilter(search=term))[1] == 0

@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SALARY_", env_file=".env", extra="ignore")
 
-    database_url: str = "sqlite:///./salary.db"
+    database_url: str = "postgresql+psycopg://salary:salary@localhost:5433/salary"
     # Production schema is managed by Alembic (`alembic upgrade head`). Tests opt in to a
     # fast create_all() instead.
     auto_create_schema: bool = False

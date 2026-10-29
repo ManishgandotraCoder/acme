@@ -19,10 +19,9 @@ COPY backend/alembic.ini ./
 COPY backend/migrations ./migrations
 COPY --from=web /web/dist ./static
 
-ENV SALARY_DATABASE_URL=sqlite:////data/salary.db \
-    SALARY_STATIC_DIR=/app/static \
+# SALARY_DATABASE_URL (PostgreSQL) is supplied by the environment: docker compose or the host.
+ENV SALARY_STATIC_DIR=/app/static \
     PATH="/app/.venv/bin:$PATH"
-VOLUME /data
 EXPOSE 8000
 
 # Migrate, seed 10k employees on first boot only, then serve.

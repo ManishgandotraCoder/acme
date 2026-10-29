@@ -1,11 +1,12 @@
 """Read-only pay analytics.
 
-Aggregation happens in SQL (count/min/max/avg/sum grouped by the relevant columns). Values
-are converted to USD *after* grouping by country, so mixed currencies are never summed.
+Aggregation happens in SQL (count/min/max/avg/sum/median grouped by the relevant columns),
+served by covering indexes. Values are converted to USD *after* grouping by country, so mixed
+currencies are never summed. Postgres returns averages as Decimal; they are converted to float
+at this boundary before any FX maths.
 """
 
 from collections import defaultdict
-from statistics import median
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -43,11 +44,11 @@ class InsightsService:
                 func.min(Employee.annual_salary),
                 func.max(Employee.annual_salary),
                 func.avg(Employee.annual_salary),
+                func.percentile_cont(0.5).within_group(Employee.annual_salary),
             )
             .group_by(Employee.country)
             .order_by(Employee.country)
         ).all()
-        salaries = self._salaries_by(Employee.country)
 
         return [
             CountryStats(
@@ -57,10 +58,10 @@ class InsightsService:
                 min_salary=lo,
                 max_salary=hi,
                 average_salary=round(avg),
-                median_salary=round(median(salaries[country])),
-                average_salary_usd=to_usd(avg, country),
+                median_salary=round(median),
+                average_salary_usd=to_usd(float(avg), country),
             )
-            for country, count, lo, hi, avg in aggregates
+            for country, count, lo, hi, avg, median in aggregates
         ]
 
     def job_title_stats(self, country: str) -> list[JobTitleStats]:
@@ -112,12 +113,3 @@ class InsightsService:
             )
             for department in sorted(headcount)
         ]
-
-    def _salaries_by(self, column) -> dict[str, list[int]]:
-        grouped: dict[str, list[int]] = defaultdict(list)
-        rows = self._session.execute(
-            select(column, Employee.annual_salary).order_by(column, Employee.annual_salary)
-        )
-        for key, salary in rows:
-            grouped[key].append(salary)
-        return grouped
