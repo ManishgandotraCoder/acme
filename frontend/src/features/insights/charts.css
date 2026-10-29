@@ -1,0 +1,23 @@
+/*
+ * Categorical chart colors (fixed order, never cycled), validated for colour-vision deficiency
+ * and separation against this app's surfaces with the dataviz palette validator: light on
+ * #ffffff, dark on #212623. Light slots 3-5 sit below 3:1 on white, so every chart using them
+ * also shows labelled values (legend with numbers). "Other" is a neutral, not a hue.
+ */
+:root {
+  --chart-cat-1: #2a78d6;
+  --chart-cat-2: #eb6834;
+  --chart-cat-3: #1baf7a;
+  --chart-cat-4: #eda100;
+  --chart-cat-5: #e87ba4;
+  --chart-other: #647069;
+}
+
+[data-mantine-color-scheme='dark'] {
+  --chart-cat-1: #3987e5;
+  --chart-cat-2: #d95926;
+  --chart-cat-3: #199e70;
+  --chart-cat-4: #c98500;
+  --chart-cat-5: #d55181;
+  --chart-other: #9ea9a3;
+}

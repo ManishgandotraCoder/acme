@@ -7,12 +7,21 @@ import { Link } from 'react-router-dom'
 import { formatMoney, formatNumber } from '@/shared/lib/format'
 import { LoadingStatus, SkeletonRows } from '@/shared/ui/loading'
 import { insightsApi } from '@/features/insights/api'
+import { AverageVsMedianChart, HeadcountDonut, LevelGapChart, SalaryBandsChart, TrendCharts } from './PayCharts'
 
 export function InsightsPage() {
   const summary = useQuery({ queryKey: ['insights', 'summary'], queryFn: insightsApi.summary })
   const countries = useQuery({ queryKey: ['insights', 'countries'], queryFn: insightsApi.countries })
+  // Same key as the department table's "all countries" view, so it's fetched once.
+  const departments = useQuery({
+    queryKey: ['insights', 'departments', null],
+    queryFn: () => insightsApi.departments(),
+  })
+  const levels = useQuery({ queryKey: ['insights', 'levels'], queryFn: insightsApi.levels })
+  const bands = useQuery({ queryKey: ['insights', 'salary-bands'], queryFn: insightsApi.salaryBands })
+  const trend = useQuery({ queryKey: ['insights', 'salary-trends'], queryFn: insightsApi.salaryTrends })
 
-  const error = summary.error ?? countries.error
+  const error = [summary, countries, departments, levels, bands, trend].find((q) => q.error)?.error
   return (
     <Stack gap="lg">
       <div>
@@ -27,11 +36,12 @@ export function InsightsPage() {
       </div>
       {error && <Alert color="red">{error.message}</Alert>}
 
-      <SimpleGrid cols={{ base: 2, md: 4 }}>
+      <SimpleGrid cols={{ base: 2, md: 5 }}>
         <Stat label="Headcount" value={summary.data && formatNumber(summary.data.headcount)} />
         <Stat label="Countries" value={summary.data && formatNumber(summary.data.country_count)} />
         <Stat label="Annual payroll" value={summary.data && formatMoney(summary.data.total_payroll_usd, 'USD')} />
         <Stat label="Average salary" value={summary.data && formatMoney(summary.data.average_salary_usd, 'USD')} />
+        <Stat label="Median salary" value={summary.data && formatMoney(summary.data.median_salary_usd, 'USD')} />
       </SimpleGrid>
 
       <Section title="Pay by country">
@@ -91,6 +101,14 @@ export function InsightsPage() {
           </Table>
         </Table.ScrollContainer>
       </Section>
+
+      <SimpleGrid cols={{ base: 1, lg: 2 }}>
+        <SalaryBandsChart bands={bands.data} />
+        <HeadcountDonut departments={departments.data} />
+        <LevelGapChart levels={levels.data} />
+        <AverageVsMedianChart departments={departments.data} />
+        <TrendCharts trend={trend.data} />
+      </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, lg: 2 }}>
         <JobTitlesSection countries={countries.data?.map((c) => c.country) ?? []} />
