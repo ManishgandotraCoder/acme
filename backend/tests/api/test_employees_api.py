@@ -68,6 +68,20 @@ def test_patch_salary_records_history(client, create_employee):
     assert history[0]["reason"] == "Annual review"
 
 
+def test_salary_history_shows_who_changed_it_and_when_it_takes_effect(make_client):
+    with make_client(actor_name="Priya Shah (HR)") as client:
+        employee = client.post("/api/employees", json=EMPLOYEE).json()
+        client.patch(
+            f"/api/employees/{employee['id']}",
+            json={"annual_salary": 88000, "salary_effective_date": "2026-04-01"},
+        )
+        [change] = client.get(f"/api/employees/{employee['id']}/salary-history").json()
+
+    assert change["changed_by"] == "Priya Shah (HR)"
+    assert change["effective_date"] == "2026-04-01"
+    assert employee["job_level"] == "Mid"
+
+
 def test_patch_currency_change_without_salary_is_422(client, create_employee):
     employee = create_employee()
     response = client.patch(f"/api/employees/{employee['id']}", json={"country": "India"})

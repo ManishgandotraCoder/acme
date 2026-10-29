@@ -47,6 +47,7 @@ EMPLOYEE = {
     "full_name": "Ada Lovelace",
     "email": "ada@example.com",
     "job_title": "Software Engineer",
+    "job_level": "Mid",
     "department": "Engineering",
     "country": "United Kingdom",
     "annual_salary": 80000,

@@ -1,10 +1,14 @@
+from datetime import date
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.actor import Actor
 from app.modules.employees.errors import (
     CurrencyChangeRequiresSalaryError,
     DuplicateEmailError,
     EmployeeNotFoundError,
+    SalaryEffectiveBeforeHireError,
 )
 from app.modules.employees.models import Employee, SalaryChange
 from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
@@ -13,10 +17,14 @@ from app.shared.countries import currency_for
 
 
 class EmployeeService:
-    """Use-cases for managing employees. Owns the transaction boundary."""
+    """Use-cases for managing employees. Owns the transaction boundary.
 
-    def __init__(self, session: Session) -> None:
+    ``actor`` is who the changes are made by; it is recorded on every salary change.
+    """
+
+    def __init__(self, session: Session, *, actor: Actor) -> None:
         self._session = session
+        self._actor = actor
         self._repo = EmployeeRepository(session)
 
     def create(self, data: EmployeeCreate) -> Employee:
@@ -55,6 +63,7 @@ class EmployeeService:
         employee = self.get(employee_id)
         changes = data.model_dump(exclude_unset=True, exclude_none=True)
         reason = changes.pop("salary_change_reason", None)
+        effective_date = changes.pop("salary_effective_date", None) or date.today()
 
         if "email" in changes:
             changes["email"] = changes["email"].lower()
@@ -71,6 +80,8 @@ class EmployeeService:
         employee.currency = new_currency
 
         if (employee.annual_salary, new_currency) != (previous_salary, previous_currency):
+            if effective_date < employee.hire_date:
+                raise SalaryEffectiveBeforeHireError(effective_date, employee.hire_date)
             self._session.add(
                 SalaryChange(
                     employee=employee,
@@ -79,6 +90,8 @@ class EmployeeService:
                     previous_currency=previous_currency,
                     new_currency=new_currency,
                     reason=reason,
+                    effective_date=effective_date,
+                    changed_by=self._actor.name,
                 )
             )
 
@@ -94,7 +107,11 @@ class EmployeeService:
         stmt = (
             select(SalaryChange)
             .where(SalaryChange.employee_id == employee_id)
-            .order_by(SalaryChange.changed_at.desc(), SalaryChange.id.desc())
+            .order_by(
+                SalaryChange.effective_date.desc(),
+                SalaryChange.changed_at.desc(),
+                SalaryChange.id.desc(),
+            )
         )
         return list(self._session.scalars(stmt))
 

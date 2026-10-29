@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     ollama_timeout_seconds: float = 30.0
     # Directory of the built frontend (frontend/dist). When set, the API also serves the UI.
     static_dir: str | None = None
+    # Who the app acts as until SSO exists (see app/core/actor.py).
+    actor_name: str = "HR Manager"
+    actor_permissions: list[str] = ["view_individual_pay"]
 
     @field_validator("database_url")
     @classmethod

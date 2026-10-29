@@ -18,6 +18,7 @@ class Employee(Base):
     full_name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(254), unique=True)  # stored lower-case
     job_title: Mapped[str] = mapped_column(String(80))
+    job_level: Mapped[str] = mapped_column(String(20))  # one of app.shared.levels.JOB_LEVELS
     department: Mapped[str] = mapped_column(String(80))
     country: Mapped[str] = mapped_column(String(60))
     currency: Mapped[str] = mapped_column(String(3))
@@ -36,7 +37,7 @@ class Employee(Base):
     salary_changes: Mapped[list["SalaryChange"]] = relationship(
         back_populates="employee",
         cascade="all, delete-orphan",
-        order_by="desc(SalaryChange.changed_at)",
+        order_by="desc(SalaryChange.effective_date)",
     )
 
     # Each index serves a measured read path (docs/adr/0006-indexing.md;
@@ -90,11 +91,20 @@ class SalaryChange(Base):
     previous_currency: Mapped[str] = mapped_column(String(3))
     new_currency: Mapped[str] = mapped_column(String(3))
     reason: Mapped[str | None] = mapped_column(String(255))
+    # When the new salary applies (may be backdated), as opposed to when it was recorded.
+    effective_date: Mapped[date] = mapped_column(Date)
+    changed_by: Mapped[str] = mapped_column(String(120))
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     employee: Mapped[Employee] = relationship(back_populates="salary_changes")
 
-    # History is read newest-first per employee.
     __table_args__ = (
-        Index("ix_salary_changes_employee_changed_at", "employee_id", "changed_at", "id"),
+        # History is read newest-effective-first per employee.
+        Index(
+            "ix_salary_changes_employee_effective",
+            "employee_id",
+            "effective_date",
+            "changed_at",
+            "id",
+        ),
     )

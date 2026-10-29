@@ -25,6 +25,7 @@ describe('EmployeesPage', () => {
 
     const row = await screen.findByRole('row', { name: /ada lovelace/i })
     expect(within(row).getByText('GBP 80,000')).toBeInTheDocument()
+    expect(within(row).getByText('Mid')).toBeInTheDocument()
     expect(screen.getByText('10,000 employees')).toBeInTheDocument()
   })
 
@@ -92,7 +93,9 @@ describe('EmployeesPage', () => {
         previous_currency: 'GBP',
         new_currency: 'GBP',
         reason: 'Annual review',
-        changed_at: '2025-04-01T09:00:00Z',
+        effective_date: '2025-04-01',
+        changed_by: 'Priya Shah (HR)',
+        changed_at: '2025-04-03T09:00:00Z',
       },
     ])
     const { user } = renderWithProviders(<EmployeesPage />)
@@ -101,6 +104,8 @@ describe('EmployeesPage', () => {
 
     expect(await screen.findByText('Annual review')).toBeInTheDocument()
     expect(screen.getByText(/GBP 80,000 → GBP 88,000/)).toBeInTheDocument()
+    expect(screen.getByText(/effective 1 Apr 2025/i)).toBeInTheDocument()
+    expect(screen.getByText(/by Priya Shah \(HR\)/)).toBeInTheDocument()
   })
 
   it('shows an error when employees cannot be loaded', async () => {

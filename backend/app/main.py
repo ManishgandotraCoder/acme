@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import ops
+from app.core.actor import Actor
 from app.core.config import Settings, get_settings
 from app.core.database import create_schema, make_engine, make_session_factory
 from app.core.frontend import serve_frontend
@@ -34,6 +35,7 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
         if settings.auto_create_schema:
             create_schema(engine)
         app.state.session_factory = make_session_factory(engine)
+        app.state.actor = Actor(settings.actor_name, frozenset(settings.actor_permissions))
         http: httpx.Client | None = None
         if llm is None:
             http = httpx.Client(

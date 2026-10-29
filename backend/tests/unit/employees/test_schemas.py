@@ -9,6 +9,7 @@ VALID = dict(
     full_name="  Ada Lovelace  ",
     email="ada@example.com",
     job_title="Software Engineer",
+    job_level="Mid",
     department="Engineering",
     country="United Kingdom",
     annual_salary=80_000,
@@ -29,6 +30,7 @@ def test_valid_payload_is_accepted_and_whitespace_trimmed():
         ("email", "not-an-email"),
         ("full_name", "   "),
         ("hire_date", date.today() + timedelta(days=1)),
+        ("job_level", "Wizard"),
     ],
 )
 def test_invalid_fields_are_rejected(field, value):
@@ -43,3 +45,15 @@ def test_update_allows_partial_payload_but_still_validates():
     }
     with pytest.raises(ValidationError):
         EmployeeUpdate(country="Atlantis")
+
+
+def test_job_level_is_required_when_creating():
+    with pytest.raises(ValidationError) as exc:
+        EmployeeCreate(**{k: v for k, v in VALID.items() if k != "job_level"})
+    assert exc.value.errors()[0]["loc"] == ("job_level",)
+
+
+def test_salary_effective_date_cannot_be_in_the_future():
+    with pytest.raises(ValidationError) as exc:
+        EmployeeUpdate(annual_salary=1, salary_effective_date=date.today() + timedelta(days=1))
+    assert exc.value.errors()[0]["loc"] == ("salary_effective_date",)

@@ -9,6 +9,7 @@ import random
 import pytest
 from sqlalchemy import select
 
+from app.core.actor import SYSTEM
 from app.modules.employees.repository import EmployeeFilter, EmployeeRepository, SortField
 from app.modules.employees.service import EmployeeService
 from app.modules.insights.service import InsightsService
@@ -58,7 +59,7 @@ READ_PATHS = {
     ),
     "get by id": lambda s, eid: repo(s).get(eid),
     "get by email": lambda s, eid: repo(s).get_by_email("Someone@Example.com"),
-    "salary history": lambda s, eid: EmployeeService(s).salary_history(eid),
+    "salary history": lambda s, eid: EmployeeService(s, actor=SYSTEM).salary_history(eid),
     "insights summary": lambda s, eid: InsightsService(s).summary(),
     "insights by country": lambda s, eid: InsightsService(s).country_stats(),
     "insights by job title": lambda s, eid: InsightsService(s).job_title_stats("Germany"),

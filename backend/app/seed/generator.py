@@ -2,6 +2,7 @@
 
 Salary bands are expressed in USD for a US-based role, scaled by a country pay level and
 converted to local currency, then rounded to a "human" number (as HR would record it).
+Within a band, the job level sets the position: higher levels sit higher in the band.
 """
 
 import random
@@ -9,6 +10,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from app.shared.countries import get_country, to_usd
+from app.shared.levels import JOB_LEVELS, level_rank
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -75,6 +77,9 @@ DEPARTMENT_WEIGHTS = {
     "Operations": 0.16,
 }
 
+# Share of the workforce at each level (a pyramid), in JOB_LEVELS order.
+LEVEL_WEIGHTS = (0.20, 0.35, 0.25, 0.15, 0.05)
+
 HIRE_DATE_START = date(2010, 1, 1)
 HIRE_DATE_END = date(2026, 9, 30)  # fixed so output is reproducible
 
@@ -101,14 +106,16 @@ def generate_employees(
         country = rng.choices(countries, country_weights)[0]
         department = rng.choices(departments, department_weights)[0]
         job_title, (low, high) = rng.choice(list(ROLES[department].items()))
+        level = rng.choices(JOB_LEVELS, LEVEL_WEIGHTS)[0]
 
-        salary = _local_salary(rng.uniform(low, high), country)
+        salary = _local_salary(_band_position(low, high, level, rng), country)
         rows.append(
             {
                 "full_name": f"{first} {last}",
                 # Index suffix guarantees uniqueness across 10k rows with repeated names.
                 "email": f"{first}.{last}.{i + 1}@acme.com".lower(),
                 "job_title": job_title,
+                "job_level": level,
                 "department": department,
                 "country": country,
                 "currency": get_country(country).currency,
@@ -119,6 +126,13 @@ def generate_employees(
             }
         )
     return rows
+
+
+def _band_position(low: int, high: int, level: str, rng: random.Random) -> float:
+    """Each level owns an overlapping slice of the band; Principal sits at the top."""
+    slice_start = level_rank(level) / len(JOB_LEVELS)
+    position = slice_start + rng.uniform(0, 1.6 / len(JOB_LEVELS))
+    return low + (high - low) * min(position, 1.0)
 
 
 def _local_salary(us_usd: float, country: str) -> int:

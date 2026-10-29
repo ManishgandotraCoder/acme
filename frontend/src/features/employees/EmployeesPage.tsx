@@ -186,6 +186,7 @@ export function EmployeesPage() {
                 </Table.Th>
                 <Table.Th>Name</Table.Th>
                 <Table.Th>Job title</Table.Th>
+                <Table.Th>Level</Table.Th>
                 <Table.Th>Department</Table.Th>
                 <Table.Th>Country</Table.Th>
                 <Table.Th ta="right">Annual salary</Table.Th>
@@ -194,7 +195,7 @@ export function EmployeesPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody style={{ opacity: employees.isPlaceholderData ? 0.6 : 1, transition: 'opacity 150ms' }}>
-              {employees.isPending && <SkeletonRows rows={10} columns={8} />}
+              {employees.isPending && <SkeletonRows rows={10} columns={9} />}
               {employees.data?.items.map((e, i) => (
                 <Table.Tr key={e.id}>
                   <Table.Td ta="right" c="dimmed" ff="monospace" fz="sm">
@@ -209,6 +210,7 @@ export function EmployeesPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td>{e.job_title}</Table.Td>
+                  <Table.Td>{e.job_level}</Table.Td>
                   <Table.Td>{e.department}</Table.Td>
                   <Table.Td>{e.country}</Table.Td>
                   <Table.Td ta="right" ff="monospace">
@@ -226,7 +228,7 @@ export function EmployeesPage() {
               ))}
               {employees.data?.items.length === 0 && (
                 <Table.Tr>
-                  <Table.Td colSpan={8}>
+                  <Table.Td colSpan={9}>
                     <Text c="dimmed" ta="center" py="lg">
                       No employees match these filters.
                     </Text>

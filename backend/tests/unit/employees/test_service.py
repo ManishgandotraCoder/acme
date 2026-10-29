@@ -2,10 +2,12 @@ from datetime import date
 
 import pytest
 
+from app.core.actor import Actor
 from app.modules.employees.errors import (
     CurrencyChangeRequiresSalaryError,
     DuplicateEmailError,
     EmployeeNotFoundError,
+    SalaryEffectiveBeforeHireError,
 )
 from app.modules.employees.schemas import EmployeeCreate, EmployeeUpdate
 from app.modules.employees.service import EmployeeService
@@ -16,6 +18,7 @@ def _payload(**overrides) -> EmployeeCreate:
         full_name="Ada Lovelace",
         email="Ada@example.com",
         job_title="Software Engineer",
+        job_level="Mid",
         department="Engineering",
         country="India",
         annual_salary=2_400_000,
@@ -25,9 +28,12 @@ def _payload(**overrides) -> EmployeeCreate:
     return EmployeeCreate(**data)
 
 
+HR = Actor(name="Priya Shah (HR)", permissions=frozenset())
+
+
 @pytest.fixture
 def service(session):
-    return EmployeeService(session)
+    return EmployeeService(session, actor=HR)
 
 
 def test_create_normalises_email_and_derives_currency_from_country(service):
@@ -132,3 +138,62 @@ def test_usd_salary_is_kept_in_sync_for_sorting(service):
 
     service.update(employee.id, EmployeeUpdate(country="Germany", annual_salary=50_000))
     assert service.get(employee.id).annual_salary_usd == 54_000
+
+
+def test_salary_change_records_who_made_it(service):
+    employee = service.create(_payload())
+    service.update(employee.id, EmployeeUpdate(annual_salary=2_500_000))
+
+    [change] = service.salary_history(employee.id)
+    assert change.changed_by == "Priya Shah (HR)"
+
+
+def test_salary_change_takes_effect_on_the_given_date(service):
+    employee = service.create(_payload())
+    service.update(
+        employee.id,
+        EmployeeUpdate(annual_salary=2_500_000, salary_effective_date=date(2026, 4, 1)),
+    )
+
+    [change] = service.salary_history(employee.id)
+    assert change.effective_date == date(2026, 4, 1)
+
+
+def test_salary_change_takes_effect_today_by_default(service):
+    employee = service.create(_payload())
+    service.update(employee.id, EmployeeUpdate(annual_salary=2_500_000))
+
+    [change] = service.salary_history(employee.id)
+    assert change.effective_date == date.today()
+
+
+def test_salary_change_cannot_take_effect_before_the_hire_date(service):
+    employee = service.create(_payload(hire_date=date(2021, 3, 1)))
+
+    with pytest.raises(SalaryEffectiveBeforeHireError):
+        service.update(
+            employee.id,
+            EmployeeUpdate(annual_salary=2_500_000, salary_effective_date=date(2021, 2, 28)),
+        )
+
+
+def test_salary_history_is_ordered_by_effective_date_even_when_backdated(service):
+    employee = service.create(_payload())
+    service.update(
+        employee.id,
+        EmployeeUpdate(annual_salary=2_600_000, salary_effective_date=date(2026, 4, 1)),
+    )
+    service.update(  # recorded later, but effective earlier
+        employee.id,
+        EmployeeUpdate(annual_salary=2_500_000, salary_effective_date=date(2025, 4, 1)),
+    )
+
+    history = service.salary_history(employee.id)
+    assert [c.effective_date for c in history] == [date(2026, 4, 1), date(2025, 4, 1)]
+
+
+def test_job_level_is_stored_and_can_change(service):
+    employee = service.create(_payload(job_level="Senior"))
+    assert employee.job_level == "Senior"
+
+    assert service.update(employee.id, EmployeeUpdate(job_level="Lead")).job_level == "Lead"

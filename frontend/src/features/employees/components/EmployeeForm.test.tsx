@@ -13,6 +13,8 @@ describe('EmployeeForm (create)', () => {
     await user.type(screen.getByLabelText(/email/i), 'grace@example.com')
     await user.type(screen.getByRole('textbox', { name: /job title/i }), 'Software Engineer')
     await user.type(screen.getByRole('textbox', { name: /department/i }), 'Engineering')
+    await user.click(screen.getByRole('textbox', { name: /job level/i }))
+    await user.click(screen.getByRole('option', { name: 'Senior' }))
     await user.click(screen.getByRole('textbox', { name: /country/i }))
     await user.click(screen.getByRole('option', { name: 'India' }))
     await user.type(screen.getByLabelText(/annual salary/i), '2400000')
@@ -23,6 +25,7 @@ describe('EmployeeForm (create)', () => {
       full_name: 'Grace Hopper',
       email: 'grace@example.com',
       job_title: 'Software Engineer',
+      job_level: 'Senior',
       department: 'Engineering',
       country: 'India',
       annual_salary: 2400000,
@@ -50,6 +53,7 @@ describe('EmployeeForm (create)', () => {
     expect(screen.getByText('Full name is required')).toBeInTheDocument()
     expect(screen.getByText('Enter a valid email')).toBeInTheDocument()
     expect(screen.getByText('Salary must be greater than 0')).toBeInTheDocument()
+    expect(screen.getByText('Job level is required')).toBeInTheDocument()
   })
 })
 
@@ -74,16 +78,21 @@ describe('EmployeeForm (edit)', () => {
       <EmployeeForm meta={meta} employee={buildEmployee()} onSubmit={onSubmit} />,
     )
     expect(screen.queryByLabelText(/reason/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/effective from/i)).not.toBeInTheDocument()
 
     const salary = screen.getByLabelText(/annual salary/i)
     await user.clear(salary)
     await user.type(salary, '88000')
     await user.type(screen.getByLabelText(/reason/i), 'Annual review')
+    const effective = screen.getByLabelText(/effective from/i)
+    await user.clear(effective)
+    await user.type(effective, '2026-04-01')
     await user.click(screen.getByRole('button', { name: /save/i }))
 
     expect(onSubmit).toHaveBeenCalledWith({
       annual_salary: 88000,
       salary_change_reason: 'Annual review',
+      salary_effective_date: '2026-04-01',
     })
   })
 })

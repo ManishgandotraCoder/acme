@@ -76,6 +76,7 @@ def build_employee(**overrides) -> Employee:
         full_name="Ada Lovelace",
         email="ada@example.com",
         job_title="Software Engineer",
+        job_level="Mid",
         department="Engineering",
         country="United Kingdom",
         currency="GBP",

@@ -5,6 +5,7 @@ export const meta: Meta = {
     { name: 'India', currency: 'INR' },
     { name: 'United Kingdom', currency: 'GBP' },
   ],
+  job_levels: ['Junior', 'Mid', 'Senior', 'Lead', 'Principal'],
   departments: ['Engineering', 'Sales'],
   job_titles: ['Account Executive', 'Software Engineer'],
 }
@@ -15,6 +16,7 @@ export function buildEmployee(overrides: Partial<Employee> = {}): Employee {
     full_name: 'Ada Lovelace',
     email: 'ada@example.com',
     job_title: 'Software Engineer',
+    job_level: 'Mid',
     department: 'Engineering',
     country: 'United Kingdom',
     currency: 'GBP',

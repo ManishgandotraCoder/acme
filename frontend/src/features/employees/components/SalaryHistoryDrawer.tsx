@@ -33,6 +33,7 @@ export function SalaryHistoryDrawer({ employee, onClose }: { employee: Employee 
             >
               {change.reason && <Text size="sm">{change.reason}</Text>}
               <Text size="xs" c="dimmed">
+                Effective {formatDate(change.effective_date)} · by {change.changed_by}, recorded{' '}
                 {formatDate(change.changed_at)}
               </Text>
             </Timeline.Item>
