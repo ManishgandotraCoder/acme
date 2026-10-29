@@ -31,6 +31,7 @@ import { useLocation } from 'react-router-dom'
 import { assistantApi } from '@/features/assistant/api'
 import type { AskResult } from '@/features/assistant/types'
 import { toAnswerParts } from './answerFormat'
+import { loadConversation, saveConversation } from './conversationStore'
 import { WorkingIndicator } from '@/shared/ui/loading'
 
 // Charts are heavy and the chat is on every page: load them with the first answer that has one.
@@ -78,8 +79,8 @@ export function ChatWidget() {
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
-  const [messages, setMessages] = useState<Message[]>([])
-  const nextId = useRef(0)
+  const [messages, setMessages] = useState<Message[]>(() => loadConversation<Message>())
+  const nextId = useRef(Math.max(-1, ...messages.map((m) => m.id)) + 1)
   const viewport = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
 
@@ -110,6 +111,8 @@ export function ChatWidget() {
   useEffect(() => {
     if (open) input.current?.focus()
   }, [open])
+
+  useEffect(() => saveConversation(messages), [messages])
 
   const send = (text: string) => {
     const question = text.trim()

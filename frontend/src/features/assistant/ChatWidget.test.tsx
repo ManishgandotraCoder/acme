@@ -62,6 +62,7 @@ const providers = [
 
 describe('ChatWidget', () => {
   beforeEach(() => {
+    localStorage.clear()
     vi.spyOn(assistantApi, 'providers').mockResolvedValue([providers[0]])
   })
 
@@ -205,5 +206,46 @@ describe('ChatWidget', () => {
     const { chat } = await openChat()
     await screen.findByRole('dialog')
     expect(within(chat).queryByRole('textbox', { name: /model/i })).not.toBeInTheDocument()
+  })
+
+  it('saves the conversation so it survives a page reload', async () => {
+    vi.spyOn(assistantApi, 'ask').mockResolvedValue(answer)
+    const first = await openChat()
+    await first.user.type(within(first.chat).getByLabelText(/message/i), 'Analysts in Germany?{Enter}')
+    await within(first.chat).findByText(answer.answer)
+    first.unmount()
+
+    const { chat } = await openChat()
+
+    expect(within(chat).getByText('Analysts in Germany?')).toBeInTheDocument()
+    expect(within(chat).getByText(answer.answer)).toBeInTheDocument()
+  })
+
+  it('starts fresh, and forgets the saved conversation, on "New conversation"', async () => {
+    vi.spyOn(assistantApi, 'ask').mockResolvedValue(answer)
+    const first = await openChat()
+    await first.user.type(within(first.chat).getByLabelText(/message/i), 'Analysts in Germany?{Enter}')
+    await within(first.chat).findByText(answer.answer)
+    await first.user.click(within(first.chat).getByRole('button', { name: /new conversation/i }))
+    first.unmount()
+
+    const { chat } = await openChat()
+
+    expect(within(chat).queryByText('Analysts in Germany?')).not.toBeInTheDocument()
+  })
+
+  it('still works when the browser blocks storage', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    vi.spyOn(assistantApi, 'ask').mockResolvedValue(answer)
+    const { user, chat } = await openChat()
+
+    await user.type(within(chat).getByLabelText(/message/i), 'Analysts?{Enter}')
+
+    expect(await within(chat).findByText(answer.answer)).toBeInTheDocument()
   })
 })
