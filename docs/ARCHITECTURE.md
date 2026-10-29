@@ -26,12 +26,12 @@ flowchart TB
     subgraph modules
         EMP[employees<br/>models · schemas · repository<br/>service · router · errors]
         INS[insights<br/>schemas · service · router]
-        AST[assistant<br/>prompt · intent · answers<br/>service · llm · ollama · router]
+        AST[assistant<br/>prompt · intent · answers · service<br/>providers: ollama · anthropic · openai<br/>router]
     end
 
     subgraph foundation
-        CORE[core<br/>config · database · dependencies<br/>errors · http_errors · logging<br/>ops · frontend · pagination]
-        SHARED[shared<br/>countries · currencies · FX]
+        CORE[core<br/>config · database · dependencies · actor<br/>errors · http_errors · logging<br/>ops · frontend · pagination]
+        SHARED[shared<br/>countries · currencies · FX · job levels]
     end
 
     main --> EMP & INS & AST & CORE
@@ -51,24 +51,27 @@ backend/
 │   │   ├── config.py           typed settings (SALARY_* env vars)
 │   │   ├── database.py         engine, sessions, Base, required extensions (pg_trgm)
 │   │   ├── dependencies.py     SessionDep
-│   │   ├── errors.py           DomainError → NotFound / Conflict / BusinessRule / ServiceUnavailable
+│   │   ├── actor.py            who is acting + permissions (the seam SSO would fill)
+│   │   ├── errors.py           DomainError → NotFound / Conflict / BusinessRule / PermissionDenied / ServiceUnavailable
 │   │   ├── http_errors.py      category → HTTP status, in one place
 │   │   ├── logging.py          request id (contextvar), access log
 │   │   ├── ops.py              /api/health (liveness), /api/ready (readiness)
 │   │   ├── frontend.py         serves the built SPA
 │   │   └── pagination.py       Page[T]
 │   ├── shared/countries.py     countries, currencies, static FX (ADR 0002)
+│   ├── shared/levels.py        the job-level ladder (Junior → Principal)
 │   ├── modules/
 │   │   ├── employees/          CRUD, search, salary audit trail
-│   │   ├── insights/           read-only pay analytics
-│   │   └── assistant/          plain-English questions (ADR 0003)
+│   │   ├── insights/           read-only pay analytics (medians, levels, outliers, bands, trends)
+│   │   └── assistant/          salary intelligence: questions → allow-listed analytics (ADR 0008)
 │   └── seed/                   deterministic 10k generator + CLI
 ├── migrations/                 Alembic, one PostgreSQL baseline (ADR 0007)
 └── tests/
     ├── unit/<module>/          services, repository, schemas, resolver, seed
     ├── unit/core/              error mapping, migration drift
     ├── unit/test_architecture.py
-    └── api/                    HTTP contract tests via TestClient
+    ├── api/                    HTTP contract tests via TestClient
+    └── benchmark/              the 11 predefined questions, verified against seeded data
 ```
 
 ### Responsibilities inside a module
@@ -84,7 +87,8 @@ backend/
 
 ### Error handling
 Services raise domain errors; `core/http_errors.py` maps the *category* to a status:
-`NotFound → 404`, `Conflict → 409`, `BusinessRule → 422`, `ServiceUnavailable → 503`.
+`NotFound → 404`, `Conflict → 409`, `BusinessRule → 422`, `PermissionDenied → 403`,
+`ServiceUnavailable → 503`.
 Dependency failures return a safe `public_message` and log internal details. Adding an
 error never touches infrastructure.
 
@@ -103,6 +107,7 @@ erDiagram
         string full_name "indexed"
         string email "unique, lower-cased"
         string job_title "indexed"
+        string job_level "Junior → Principal, indexed"
         string department "indexed"
         string country "indexed"
         string currency "derived from country"
@@ -120,7 +125,9 @@ erDiagram
         string previous_currency
         string new_currency
         string reason
-        datetime changed_at
+        date effective_date "when it applies (may be backdated)"
+        string changed_by "the acting user"
+        datetime changed_at "when it was recorded"
     }
 ```
 Every read path is index-backed ([ADR 0006](adr/0006-indexing.md)): composite indexes for
@@ -129,33 +136,47 @@ cross-currency sorting, and `pg_trgm` GIN indexes for substring search. `tests/u
 full scan or in-memory sort. The schema is owned by Alembic; a test fails if models and
 migrations drift.
 
-## Assistant pipeline: the model never produces numbers
+## Salary intelligence: the model never produces numbers
+
+Decision record: [ADR 0008](adr/0008-natural-language-salary-intelligence.md).
 
 ```mermaid
 sequenceDiagram
     participant UI
     participant R as router
     participant S as AskService
-    participant P as prompt
-    participant L as Ollama
+    participant L as Model provider<br/>(Ollama · Claude · OpenAI)
     participant I as IntentResolver
     participant A as AnswerComposer
     participant Q as InsightsService
-    UI->>R: POST /api/ask "What do data analysts earn in Germany?"
-    R->>S: ask(question)
-    S->>P: build_system_prompt(vocabulary from DB)
-    S->>L: question + JSON schema, temperature 0
-    L-->>S: {"metric": "job_title_stats", "job_title": "Data Analyst"}
+    UI->>R: POST /api/ask {question, provider?}
+    R->>S: ask(question) as actor
+    S->>L: grounded prompt + strict JSON schema
+    L-->>S: {"metric": "department_stats", "departments": [...]}
     S->>I: resolve(raw, question)
-    Note over I: entities from question text first;<br/>model values kept only if known + grounded<br/>→ country=Germany recovered
-    S->>A: compose(intent)
-    A->>Q: job_title_stats("Germany")
-    Q-->>A: SQL aggregates
-    A-->>UI: templated answer + intent + rows
+    Note over I: question's own entities win;<br/>model guesses kept only if known + grounded<br/>in unclaimed words; median read from text
+    S->>A: compose(intent, question)
+    Note over A: ambiguous → clarification<br/>individual-level without permission → forbidden
+    A->>Q: allow-listed read-only SQL aggregate
+    Q-->>A: rows
+    A-->>UI: templated answer + table + chart + scope + suggestions
 ```
 
-`IntentResolver` is pure (no DB, no LLM), so the hallucination guards are unit-tested
-directly.
+| Operation | Answers | Basis |
+|---|---|---|
+| `org_summary` | headcount, payroll, average and median | USD at fixed FX |
+| `country_stats` | one country, or all ranked | local + USD |
+| `job_title_stats` | a role in a country, or across countries | local (+ USD to compare) |
+| `department_stats` | one, several (compare) or all ranked by average/median | USD |
+| `level_stats` | pay gap between levels | like for like: same title and country |
+| `salary_bands` | distribution | USD bands |
+| `outliers` | ≥25% from peers (same title, level, country) | local; needs permission |
+| `above_department_average` | who and how many | USD; needs permission |
+| `salary_trends` | changes and raises per month, last 12 months | by effective date |
+
+`IntentResolver` and the providers' adapters are tested without a database or network; the
+composer is tested against Postgres with a fake model; `tests/benchmark` checks 11 questions
+end to end against an oracle computed from the seed generator.
 
 ## Frontend
 
@@ -169,7 +190,7 @@ frontend/src/
 ├── features/
 │   ├── employees/           api.ts · types.ts · hooks.ts · EmployeesPage · components/
 │   ├── insights/            api.ts · types.ts · InsightsPage
-│   └── assistant/           api.ts · types.ts · ChatWidget · answerFormat
+│   └── assistant/           api.ts · types.ts · ChatWidget · AnswerEvidence (chart + table)
 └── test/                    render-with-providers, fixtures, jsdom setup
 ```
 
@@ -179,7 +200,8 @@ frontend/src/
 - Routes: `/` employees (home), `/insights` pay insights. No sidebar: the home page links to
   insights and back. The pay assistant is a floating chat mounted once in the shell, so its
   conversation survives navigation; the old `/ask` URL opens it.
-- Routes are lazy-loaded, so the charting library downloads only for *Pay insights*.
+- Routes are lazy-loaded; the charting library is one chunk fetched by *Pay insights* or the
+  first chat answer with a chart.
 - Theme (`app/theme.ts`): green brand palette with green-tinted neutrals; WCAG contrast of
   buttons and dimmed text is asserted in tests.
 - `@/` import alias; features don't import each other.

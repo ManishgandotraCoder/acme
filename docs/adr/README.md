@@ -12,3 +12,4 @@ New decisions get the next number; superseded ones are marked, never deleted.
 | [0005](0005-single-container-deployment.md) | Single container serving API and UI | Accepted |
 | [0006](0006-indexing.md) | Index every read path, verified by query-plan tests | Accepted |
 | [0007](0007-postgresql.md) | PostgreSQL as the database | Accepted |
+| [0008](0008-natural-language-salary-intelligence.md) | Natural-language salary intelligence over allow-listed analytics | Accepted |

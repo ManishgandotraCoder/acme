@@ -39,36 +39,67 @@ cases the rule was the same: AI proposes, tests and real runs decide.
 | **Salary sort compared raw local amounts** — JPY/INR employees ranked as "highest paid" | End-to-end smoke test reading the actual data | Sort by USD equivalent in SQL + test + clearer UI label |
 | Two hidden boundary violations after the restructure (`core` importing the assistant's `LLMClient` and the employee models) | The new architecture tests, on their first run | LLM DI moved into the assistant module; table registration moved to the composition root |
 | SQLite WAL/SHM sidecar files had been committed (`.gitignore` covered `*.db` only) | Reviewing `git status` during the restructure | Untracked and ignored |
+| **Pay gap between levels compared org-wide medians**: on seeded data, Principals "earned 1.5% less" than Leads, because a level's median mostly reflects which countries its people are in | Running the new analytics on the 10k seed and reading the numbers | Like-for-like gaps (same title and country, one level apart) + a regression test with the confounded case |
+| Seed data too clean: nobody far from their peers (outlier question always "nobody") and Principal salaries capped at the band top | Same real run | Evenly spaced level bands, ~1% off-band salaries, tests on both |
+| A role question about "wizards" in Germany was answered as "Data Analyst in Germany: …" because Germany has one title, as if a role had been matched | A regression test written for the dropped-title case | The single-role format only applies when the question named a role |
+| Query-plan check passed or failed depending on test order: `enable_sort=off` doesn't disable *incremental* sorts, and dead rows from another test's rolled-back insert changed the planner's size estimates | The new benchmark running before the plan tests | Disable incremental sorts too + a regression test that reproduces the bloat |
+| Anthropic SDK 2.x runs on `httpx2`; the test fakes used `httpx` | `TypeError` in the adapter tests | Fakes built with `httpx2.MockTransport` (per the SDK's upgrade notes) |
+| The level chart plotted org-wide medians (Principal below Lead) under a headline saying every level earns more; key columns scrolled off the chat table | Screenshots of the real UI in Chrome | Chart the like-for-like gap; key columns first |
+| Chat charts pulled recharts into every page's bundle (280 kB gzipped, from 170 kB) | Measuring the build output while updating a docs claim | Lazy-load the chart view |
 
-## 2. AI as a product feature (Ask AI)
+## 2. AI as a product feature (Ask Salary Data)
 
 ### Design principle
-The model is used **only to classify** a question into a whitelisted intent
-(`org_summary | country_stats | job_title_stats | department_stats | unsupported` plus
-optional country / job title / department). The backend runs the matching insight query and
-renders the answer from a template. The model never sees salary data, never writes SQL and
-never produces a number.
+The model is used **only to select** one of nine allow-listed analytics operations
+(`org_summary`, `country_stats`, `job_title_stats`, `department_stats`, `level_stats`,
+`salary_bands`, `outliers`, `above_department_average`, `salary_trends`, or `unsupported`)
+plus the countries / departments / job titles the question names. The backend verifies them,
+runs the matching read-only SQL aggregate and renders the answer from a template, with the
+table behind it, a chart and the data scope. The model never sees salary data, never writes
+SQL and never produces a number or the answer's wording
+([ADR 0008](adr/0008-natural-language-salary-intelligence.md)).
+
+Not used, on purpose: **text-to-SQL** (unreviewable queries on personal data), **LLM-written
+explanations of the results** (a model can restate a number wrongly), and **RAG** (no in-scope
+question needs documents; it would earn its place for salary-policy documents).
+
+### Providers
+Ollama (llama3.2, local) is the default; Claude (`claude-opus-5-5`) and OpenAI are used when
+their API key is configured and can be chosen per question in the chat. All three get the same
+prompt and a strict JSON schema (structured outputs). Claude runs at low effort (it's a
+classification) with server-side fallback on refusals; a refusal from any provider becomes
+"unsupported". The Claude and OpenAI adapters are tested over mocked HTTP; they have not yet
+been run against the live APIs (no keys on the development machine). `make benchmark-llm
+provider=anthropic` is the check to run once a key is set.
 
 ### Prompt (system)
-Built at request time from live data so the model can only pick real values:
+Built at request time from live data so the model can only pick real values
+(`app/modules/assistant/prompt.py`):
 ```
-You translate HR questions about employee salaries into a JSON query. Reply with JSON only.
+You translate an HR manager's question about employee pay into a JSON query. You only choose
+the operation and its filters; the system computes every number. Reply with JSON only.
 
-Choose "metric":
-- "org_summary": overall headcount, total payroll or average pay for the whole company.
-- "country_stats": pay statistics (min/max/average/median) for a country or comparing countries.
-- "job_title_stats": pay for a job title / role, optionally within a country.
-- "department_stats": pay or headcount per department, optionally within a country.
-- "unsupported": the question is not about employee pay or headcount.
+Choose "metric" (the operation):
+- "org_summary": overall headcount, total payroll, average or median pay for the whole company.
+- "country_stats": pay in a country, or comparing countries.
+- "job_title_stats": pay for a job title / role, optionally in a country.
+- "department_stats": pay or headcount by department, comparing departments, or which
+  department pays most.
+- "level_stats": pay by job level (Junior to Principal), the salary gap between levels,
+  pay equity between comparable roles and levels.
+- "salary_bands": how many employees fall into each salary band / the salary distribution.
+- "outliers": employees paid significantly more or less than peers in comparable roles.
+- "above_department_average": employees earning above their department's average.
+- "salary_trends": how salaries changed over time / raises over the last 12 months.
+- "unsupported": anything that is not about employee pay or headcount.
 
-Set "country", "job_title" and "department" ONLY when the question explicitly names one;
-otherwise leave them out. Use the exact spelling from these lists:
+Fill "countries", "job_titles" and "departments" ONLY with values the question explicitly
+names (several when it compares them); otherwise use empty lists. Use the exact spelling from:
 Countries: Australia, Brazil, ...
 Job titles: Accountant, Account Executive, ...
 Departments: Data, Engineering, ...
+Set "statistic" to "median" if the question asks for a median, otherwise "average".
 ```
-Sent with Ollama **structured outputs** (`format` = the intent's JSON schema) and
-`temperature: 0`.
 
 ### What the real model got wrong (first run, llama3.2 3B)
 
@@ -86,10 +117,26 @@ Sent with Ollama **structured outputs** (`format` = the intent's JSON schema) an
   with the question. Invented filters and unknown values are dropped.
 - `unsupported` was added so the model can decline.
 
-After the fix all 8 benchmark questions resolved correctly, each failure is pinned by a
-regression test in `tests/unit/test_ask_service.py`, and those tests use a fake LLM, so they
-stay fast and deterministic.
+### Second round: the salary-intelligence questions (llama3.2)
+
+| Question | Model output | Problem |
+|---|---|---|
+| "What is the average salary **in Engineering**?" | `job_title_stats`, job title *Engineering Manager* | A role guessed from the department's name: grounded because it shares the word "engineering" |
+| "Compare Engineering and Sales salaries" | `job_title_stats` with two departments | Asked for clarification instead of comparing |
+| "How much do **engineers** make?" | two of the four *Engineer* titles | A guess skipped the clarifying question and produced a 20-row listing |
+
+Fixes, each pinned by a regression test in `tests/unit/assistant/test_service.py`:
+- a span of the question names **one** value ("data analysts" is a role, not also the Data
+  department), and model guesses are grounded only in words **no explicit mention claimed**;
+- a role question that names only departments **becomes a department question**;
+- only a role the question names explicitly skips the **clarifying question** for vague words;
+- "median" vs "average" is read from the question, not the model.
+
+Result: `make benchmark-llm` (11 predefined questions, one per category and more) is
+**11/11 with llama3.2**, ~1 s per question; the numbers for the same 11 questions are checked
+against values recomputed from the seed generator in `tests/benchmark`.
 
 ### Failure handling
-If Ollama is down or slow, `/api/ask` returns **503** with a clear message. The UI explains it
-and points to *Pay insights*, which needs no model. Nothing else depends on the LLM.
+If the chosen model is down or slow, `/api/ask` returns **503** naming the provider. The UI
+explains it and points to *Pay insights*, which needs no model. Nothing else depends on the
+LLM.

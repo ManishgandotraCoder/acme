@@ -14,7 +14,7 @@ is the quick overview.
 | 5 | **Changing to a different-currency country requires a new salary** | Otherwise 2,400,000 INR silently becomes 2,400,000 EUR | One extra field for HR in a rare flow |
 | 6 | **Salary history as an append-only table**, written by the service | Audit trail is the #1 reason to leave spreadsheets | Only salary/currency changes are audited, not every field |
 | 7 | **Integer salaries (whole units)** | Annual salaries are never fractional; avoids float rounding in aggregates (Postgres `AVG` returns `Decimal`, converted once at the service boundary) | Can't represent cents (not needed) |
-| 8 | **LLM classifies intent only; answers are templated from SQL results** | A hallucinated pay figure is worse than no answer; no text-to-SQL means no injection surface | Can only answer the 4 supported question shapes (+ variations); unsupported questions get a helpful hint |
+| 8 | **LLM selects one of nine allow-listed analytics operations; answers are templated from SQL results** ([ADR 0008](adr/0008-natural-language-salary-intelligence.md)) | A hallucinated pay figure is worse than no answer; no text-to-SQL means no injection surface; answers are reproducible | Questions outside the nine operations are declined (with examples of what can be asked) |
 | 9 | **Verify the LLM's entities against the question text** | Found empirically: llama3.2 drops entities and invents filters (see AI_USAGE.md) | Synonyms the model maps ("devs" → Software Engineer) are dropped unless grounded |
 | 10 | **PostgreSQL** ([ADR 0007](adr/0007-postgresql.md); replaced SQLite) | Concurrent writers, `pg_trgm` search, `percentile_cont` median; tests run on the production database | Needs Docker locally; a network hop per query (still single-digit ms) |
 | 11 | **Modular monolith** (core / shared / modules), boundaries enforced by tests ([ADR 0001](adr/0001-modular-monolith.md)) | A feature lives in one folder; coupling is a reviewed decision; extractable later | More structure than a single-file app; microservices rejected as overkill |
@@ -26,6 +26,11 @@ is the quick overview.
 | 18 | **Request IDs + access logs, liveness/readiness endpoints** | Minimum needed to debug production and run behind a load balancer | — |
 | 19 | **Index every read path** + query-plan tests ([ADR 0006](adr/0006-indexing.md)) | 4–40× faster reads at 200k rows; regressions caught in CI | Slower bulk writes (10k seed 1.2 s on Postgres) |
 | 15 | **Offset pagination** (page/page_size ≤ 100) | Users jump to page N; data set is small | Deep offsets would be slow at millions of rows (keyset pagination then) |
+| 20 | **No RAG, no LLM-written prose** | Every in-scope question is quantitative; prose written by a model can restate a number wrongly | Plainer answers; RAG only if policy documents come into scope |
+| 21 | **Level gaps like for like** (same title and country, one level apart) | Org-wide medians per level mostly measure which countries each level is in (found on seeded data: Principal "below" Lead) | Gaps exclude groups without both levels |
+| 22 | **Individual-level answers need a permission; groups under 3 hide pay** | An average of one person is that person's salary | Small departments in small countries show headcount only, for users without the permission |
+| 23 | **Ollama default; Claude / OpenAI optional per question** | Private by default; better understanding on demand; the provider can't change a number | Cloud providers see the question text (never salary data) |
+| 24 | **Actor seam** (`core/actor.py`) instead of auth | Audit trail and permission checks exist now; SSO fills one function later | Identity comes from configuration until then |
 
 ## Deliberately not built
 See the table in [REQUIREMENTS.md](REQUIREMENTS.md#deliberately-left-out-and-why) — auth,
