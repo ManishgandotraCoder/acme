@@ -4,27 +4,35 @@ import {
   Button,
   Group,
   Modal,
-  NumberInput,
   Pagination,
   Paper,
-  Select,
-  SimpleGrid,
   Stack,
   Table,
   Text,
-  TextInput,
   Title,
   Tooltip,
+  UnstyledButton,
 } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
-import { IconChartBar, IconHistory, IconPencil, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react'
+import {
+  IconChartBar,
+  IconChevronDown,
+  IconChevronUp,
+  IconHistory,
+  IconPencil,
+  IconPlus,
+  IconSelector,
+  IconTrash,
+} from '@tabler/icons-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDate, formatMoney, formatNumber } from '@/shared/lib/format'
 import { LoadingStatus, RefreshBar, SkeletonRows } from '@/shared/ui/loading'
 import { EmployeeForm } from './components/EmployeeForm'
 import { SalaryHistoryDrawer } from './components/SalaryHistoryDrawer'
+import { DirectoryToolbar } from './components/DirectoryToolbar'
+import { SORT_OPTIONS, type Amount, type Filters } from './components/directoryOptions'
 import {
   useCreateEmployee,
   useDeleteEmployee,
@@ -35,17 +43,6 @@ import {
 import type { Employee, EmployeeInput, EmployeeQuery, EmployeeUpdate } from '@/features/employees/types'
 
 const PAGE_SIZE = 25
-
-const SORT_OPTIONS = [
-  { value: 'full_name:asc', label: 'Name (A–Z)' },
-  { value: 'annual_salary:desc', label: 'Salary, in USD terms (high → low)' },
-  { value: 'annual_salary:asc', label: 'Salary, in USD terms (low → high)' },
-  { value: 'hire_date:desc', label: 'Newest hires' },
-  { value: 'hire_date:asc', label: 'Longest tenure' },
-]
-
-type Filters = Pick<EmployeeQuery, 'country' | 'department' | 'job_title' | 'job_level' | 'currency'>
-type Amount = number | string // NumberInput yields '' when cleared
 
 const toBound = (value: Amount) => (typeof value === 'number' ? value : undefined)
 
@@ -68,7 +65,6 @@ export function EmployeesPage() {
   // Mirrors the backend rule: one currency pinned → compare local amounts, otherwise USD.
   const rangeCurrency =
     filters.currency ?? meta.data?.countries.find((c) => c.name === filters.country)?.currency ?? 'USD'
-  const currencies = [...new Set(meta.data?.countries.map((c) => c.currency) ?? [])].sort()
   const employees = useEmployees({
     search: debouncedSearch,
     ...filters,
@@ -85,10 +81,27 @@ export function EmployeesPage() {
   const remove = useDeleteEmployee()
   const saving = editing === 'new' ? create : update
 
-  const setFilter = (key: keyof Filters) => (value: string | null) => {
+  const setFilter = (key: keyof Filters, value: string | null) => {
     setFilters((f) => ({ ...f, [key]: value ?? undefined }))
     setPage(1)
   }
+  const clearFilters = () => {
+    setFilters({})
+    setSalaryMin('')
+    setSalaryMax('')
+    setPage(1)
+  }
+  /** Header click: sort by that column; clicking it again flips the direction. */
+  const sortBy = (field: EmployeeQuery['sort'], firstOrder: EmployeeQuery['order']) => {
+    const nextOrder = sortField === field ? (order === 'asc' ? 'desc' : 'asc') : firstOrder
+    setSort(`${field}:${nextOrder}`)
+    setPage(1)
+  }
+  const sortProps = (field: EmployeeQuery['sort'], firstOrder: EmployeeQuery['order']) => ({
+    active: sortField === field,
+    order,
+    onClick: () => sortBy(field, firstOrder),
+  })
   const setBound = (set: (value: Amount) => void) => (value: Amount) => {
     set(value)
     setPage(1)
@@ -143,85 +156,27 @@ export function EmployeesPage() {
         </Group>
       </Group>
 
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 5 }} spacing="sm">
-        <TextInput
-          placeholder="Search name or email"
-          leftSection={<IconSearch size={16} />}
-          value={search}
-          onChange={(e) => {
-            setSearch(e.currentTarget.value)
-            setPage(1)
-          }}
-          aria-label="Search employees"
-        />
-        <Select
-          placeholder="All countries"
-          aria-label="Filter by country"
-          clearable
-          searchable
-          data={meta.data?.countries.map((c) => c.name) ?? []}
-          value={filters.country ?? null}
-          onChange={setFilter('country')}
-        />
-        <Select
-          placeholder="All departments"
-          aria-label="Filter by department"
-          clearable
-          data={meta.data?.departments ?? []}
-          value={filters.department ?? null}
-          onChange={setFilter('department')}
-        />
-        <Select
-          placeholder="All job titles"
-          aria-label="Filter by job title"
-          clearable
-          searchable
-          data={meta.data?.job_titles ?? []}
-          value={filters.job_title ?? null}
-          onChange={setFilter('job_title')}
-        />
-        <Select
-          aria-label="Sort by"
-          data={SORT_OPTIONS}
-          value={sort}
-          allowDeselect={false}
-          onChange={(v) => v && setSort(v)}
-        />
-        <Select
-          placeholder="All levels"
-          aria-label="Filter by job level"
-          clearable
-          data={meta.data?.job_levels ?? []}
-          value={filters.job_level ?? null}
-          onChange={setFilter('job_level')}
-        />
-        <Select
-          placeholder="All currencies"
-          aria-label="Filter by currency"
-          clearable
-          data={currencies}
-          value={filters.currency ?? null}
-          onChange={setFilter('currency')}
-        />
-        <NumberInput
-          placeholder={`Min salary (${rangeCurrency})`}
-          aria-label={`Minimum salary (${rangeCurrency})`}
-          min={0}
-          allowDecimal={false}
-          thousandSeparator=","
-          value={salaryMin}
-          onChange={setBound(setSalaryMin)}
-        />
-        <NumberInput
-          placeholder={`Max salary (${rangeCurrency})`}
-          aria-label={`Maximum salary (${rangeCurrency})`}
-          min={0}
-          allowDecimal={false}
-          thousandSeparator=","
-          value={salaryMax}
-          onChange={setBound(setSalaryMax)}
-        />
-      </SimpleGrid>
+      <DirectoryToolbar
+        meta={meta.data}
+        search={search}
+        onSearch={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
+        filters={filters}
+        onFilter={setFilter}
+        salaryMin={salaryMin}
+        salaryMax={salaryMax}
+        onSalaryMin={setBound(setSalaryMin)}
+        onSalaryMax={setBound(setSalaryMax)}
+        rangeCurrency={rangeCurrency}
+        sort={sort}
+        onSort={(value) => {
+          setSort(value)
+          setPage(1)
+        }}
+        onClearAll={clearFilters}
+      />
 
       {employees.error && <Alert color="red">{employees.error.message}</Alert>}
 
@@ -235,13 +190,15 @@ export function EmployeesPage() {
                 <Table.Th w={64} ta="right">
                   #
                 </Table.Th>
-                <Table.Th>Name</Table.Th>
+                <SortableTh {...sortProps('full_name', 'asc')}>Name</SortableTh>
                 <Table.Th>Job title</Table.Th>
                 <Table.Th>Level</Table.Th>
                 <Table.Th>Department</Table.Th>
                 <Table.Th>Country</Table.Th>
-                <Table.Th ta="right">Annual salary</Table.Th>
-                <Table.Th>Hired</Table.Th>
+                <SortableTh {...sortProps('annual_salary', 'desc')} right>
+                  Annual salary
+                </SortableTh>
+                <SortableTh {...sortProps('hire_date', 'desc')}>Hired</SortableTh>
                 <Table.Th w={110} />
               </Table.Tr>
             </Table.Thead>
@@ -264,10 +221,10 @@ export function EmployeesPage() {
                   <Table.Td>{e.job_level}</Table.Td>
                   <Table.Td>{e.department}</Table.Td>
                   <Table.Td>{e.country}</Table.Td>
-                  <Table.Td ta="right" ff="monospace">
+                  <Table.Td ta="right" ff="monospace" style={{ whiteSpace: 'nowrap' }}>
                     {formatMoney(e.annual_salary, e.currency)}
                   </Table.Td>
-                  <Table.Td>{formatDate(e.hire_date)}</Table.Td>
+                  <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDate(e.hire_date)}</Table.Td>
                   <Table.Td>
                     <Group gap={4} wrap="nowrap">
                       <RowAction label={`Edit ${e.full_name}`} onClick={() => setEditing(e)} icon={<IconPencil size={16} />} />
@@ -341,5 +298,34 @@ function RowAction(props: { label: string; icon: React.ReactNode; onClick: () =>
         {props.icon}
       </ActionIcon>
     </Tooltip>
+  )
+}
+
+function SortableTh({
+  active,
+  order,
+  right,
+  onClick,
+  children,
+}: {
+  active: boolean
+  order: EmployeeQuery['order']
+  right?: boolean
+  onClick: () => void
+  children: string
+}) {
+  const Icon = !active ? IconSelector : order === 'asc' ? IconChevronUp : IconChevronDown
+  return (
+    <Table.Th
+      ta={right ? 'right' : undefined}
+      aria-sort={active ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <UnstyledButton onClick={onClick} fw={700} fz="sm" style={{ whiteSpace: 'nowrap' }}>
+        <Group gap={4} wrap="nowrap" justify={right ? 'flex-end' : undefined}>
+          {children}
+          <Icon size={14} stroke={1.5} color={active ? undefined : 'var(--mantine-color-dimmed)'} />
+        </Group>
+      </UnstyledButton>
+    </Table.Th>
   )
 }

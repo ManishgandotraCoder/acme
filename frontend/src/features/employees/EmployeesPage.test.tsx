@@ -91,6 +91,51 @@ describe('EmployeesPage', () => {
     )
   })
 
+  it('shows active filters as chips, removable one by one or all at once', async () => {
+    const { user } = renderWithProviders(<EmployeesPage />)
+    await screen.findByText('Ada Lovelace')
+    await user.click(screen.getByRole('textbox', { name: /filter by job level/i }))
+    await user.click(screen.getByRole('option', { name: 'Senior' }))
+    await user.click(screen.getByRole('textbox', { name: /filter by country/i }))
+    await user.click(screen.getByRole('option', { name: 'India' }))
+
+    const active = screen.getByRole('list', { name: /active filters/i })
+    expect(within(active).getByText('Level: Senior')).toBeInTheDocument()
+    expect(within(active).getByText('Country: India')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /filters, 2 active/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Remove filter Level: Senior' }))
+    await waitFor(() =>
+      expect(employeesApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ job_level: undefined, country: 'India' }),
+      ),
+    )
+
+    await user.click(screen.getByRole('button', { name: /clear all/i }))
+    await waitFor(() =>
+      expect(employeesApi.list).toHaveBeenLastCalledWith(expect.not.objectContaining({ country: 'India' })),
+    )
+    expect(screen.queryByRole('list', { name: /active filters/i })).not.toBeInTheDocument()
+  })
+
+  it('sorts by clicking a column header, toggling the direction', async () => {
+    const { user } = renderWithProviders(<EmployeesPage />)
+    await screen.findByText('Ada Lovelace')
+
+    await user.click(screen.getByRole('button', { name: /annual salary/i }))
+    await waitFor(() =>
+      expect(employeesApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'annual_salary', order: 'desc' }),
+      ),
+    )
+    expect(screen.getByRole('columnheader', { name: /annual salary/i })).toHaveAttribute('aria-sort', 'descending')
+
+    await user.click(screen.getByRole('button', { name: /annual salary/i }))
+    await waitFor(() =>
+      expect(employeesApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ order: 'asc' })),
+    )
+  })
+
   it('deletes an employee after confirmation', async () => {
     const remove = vi.spyOn(employeesApi, 'remove').mockResolvedValue(undefined)
     const { user } = renderWithProviders(<EmployeesPage />)
